@@ -1,0 +1,71 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+local.settings.json
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.pyright/
+.ruff_cache/
+.hypothesis/
+
+# Python environments
+.venv/
+venv/
+env/
+.tox/
+.nox/
+
+# Python packaging
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# JavaScript and TypeScript dependencies
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# Framework and compiler caches
+.next/
+.nuxt/
+.svelte-kit/
+.vite/
+*.tsbuildinfo
+
+# Generated build and test output
+build/
+dist/
+coverage/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+junit.xml
+
+# Logs and runtime files
+*.log
+*.pid
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Editors and operating systems
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
