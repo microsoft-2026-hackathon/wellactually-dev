@@ -69,3 +69,6 @@ pnpm-debug.log*
 *.swo
 .DS_Store
 Thumbs.db
+
+# Archived Documents
+docs/archive/

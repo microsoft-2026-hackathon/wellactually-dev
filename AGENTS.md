@@ -25,6 +25,10 @@ with the user's latest instruction, surface the conflict instead of guessing.
 
 Write all repository documentation in English, including Markdown files,
 code comments intended as documentation, ADRs, specifications, and plans.
+Existing Korean source artifacts are retained without rewriting:
+`docs/wellactually-product-definition.html` and `docs/ideation/*-kr.*`.
+Write their maintained explanatory versions in English; preserved source text
+does not override the canonical English product contract.
 
 ## Hackathon Decision Gate
 

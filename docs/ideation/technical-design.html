@@ -1,0 +1,1705 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Wellactually's file-based MVP with built-in SDK read tools and local Driver logs: a live file probe, state and data contracts, and the Knowledge Compilation technical design.">
+  <meta name="color-scheme" content="light">
+  <title>Wellactually — Technical Design and Data Flow</title>
+  <style>
+    :root {
+      --ink: #202b3c;
+      --muted: #536174;
+      --line: #dce2e9;
+      --paper: #fff;
+      --wash: #f6f8fb;
+      --blue: #2354a5;
+      --blue-wash: #edf3fc;
+      --green: #22604b;
+      --green-wash: #eff7f3;
+      --amber: #795423;
+      --amber-wash: #fcf7ee;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-padding-top: 28px; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+      font-size: 16px;
+      line-height: 1.85;
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+      -webkit-text-size-adjust: 100%;
+    }
+    a { color: var(--blue); text-underline-offset: 4px; }
+    a:hover { text-decoration-thickness: 2px; }
+    a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--blue); outline-offset: 4px; }
+    h1, h2, h3, h4, p, ul, ol, dl, figure, pre { margin: 0; }
+    h1, h2, h3, h4 { line-height: 1.4; letter-spacing: -.035em; }
+    h1 { font-size: clamp(2.2rem, 4.6vw, 3.5rem); font-weight: 750; }
+    h2 { font-size: 1.85rem; margin-bottom: 18px; }
+    h3 { font-size: 1.25rem; margin: 30px 0 12px; }
+    h4 { font-size: 1rem; }
+    p + p { margin-top: 12px; }
+    ul, ol { padding-left: 1.35em; }
+    li + li { margin-top: 7px; }
+    strong { font-weight: 700; }
+    code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .88em; }
+    pre > code { font-size: inherit; }
+    :not(pre) > code { padding: 2px 5px; border-radius: 4px; background: #eef1f5; }
+    pre {
+      margin-top: 16px;
+      padding: 20px 22px;
+      background: #f3f5f8;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      word-break: normal;
+      overflow-wrap: anywhere;
+      tab-size: 2;
+    }
+    .skip { position: absolute; top: 12px; left: 12px; z-index: 5; padding: 8px 16px; background: white; transform: translateY(-170%); }
+    .skip:focus { transform: translateY(0); }
+    .topbar { max-width: 1380px; margin: auto; padding: 24px 40px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--line); }
+    .brand { font-size: 1.35rem; font-weight: 780; letter-spacing: -.04em; }
+    .top-actions { display: flex; align-items: center; gap: 18px; }
+    .date, .small { color: var(--muted); font-size: .84rem; }
+    button { border: 1px solid #bbc6d5; border-radius: 6px; padding: 8px 13px; background: white; color: var(--ink); font: inherit; font-size: .82rem; cursor: pointer; }
+    button:hover { background: var(--wash); }
+    .layout { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 36px; max-width: 1540px; margin: auto; padding: 42px 40px 0; }
+    .toc { position: sticky; top: 28px; align-self: start; max-height: calc(100vh - 56px); overflow-y: auto; padding: 3px 6px 18px 0; font-size: .85rem; }
+    .toc-label { color: var(--muted); font-size: .75rem; font-weight: 700; margin-bottom: 12px; }
+    .toc ol { padding: 0; list-style: none; }
+    .toc li + li { margin-top: 4px; }
+    .toc a { display: flex; gap: 9px; padding: 6px 0; color: var(--muted); text-decoration: none; }
+    .toc a:hover { color: var(--blue); }
+    .toc a span { color: var(--blue); font-size: .77rem; min-width: 20px; padding-top: 2px; }
+    .toc-note { margin-top: 22px; border-top: 1px solid var(--line); padding-top: 16px; color: var(--muted); font-size: .77rem; }
+    main { min-width: 0; padding-bottom: 60px; }
+    .eyebrow { font-size: .77rem; color: var(--blue); font-weight: 700; letter-spacing: .08em; margin-bottom: 16px; }
+    .lead { font-size: 1.12rem; line-height: 1.85; max-width: 46em; margin-top: 22px; }
+    .intro { border-bottom: 1px solid var(--line); padding-bottom: 38px; }
+    .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 23px; }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: .77rem; font-weight: 650; color: var(--muted); background: var(--wash); }
+    .badge.proposed { color: var(--blue); background: var(--blue-wash); }
+    .badge.verified { color: var(--green); background: var(--green-wash); }
+    .badge.pending { color: var(--amber); background: var(--amber-wash); }
+    .reading-note { font-size: .88rem; color: var(--muted); margin-top: 20px; }
+    .chapter { padding-top: 46px; }
+    .chapter + .chapter { margin-top: 44px; border-top: 1px solid var(--line); }
+    .section-number { font-size: 1.125rem; color: var(--blue); font-weight: 750; letter-spacing: .04em; margin-bottom: 12px; }
+    .section-intro { color: var(--muted); margin-bottom: 22px; }
+    .note { padding: 19px 22px; border-left: 3px solid var(--blue); background: var(--blue-wash); border-radius: 0 6px 6px 0; margin: 22px 0; }
+    .note.warning { border-color: var(--amber); background: var(--amber-wash); }
+    .note p { font-size: .94rem; }
+    .note strong + p { margin-top: 6px; }
+    .two-up { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-top: 22px; }
+    .panel { border: 1px solid var(--line); border-radius: 8px; padding: 22px; background: white; }
+    .panel h3 { margin: 0 0 12px; }
+    .panel p, .panel li { font-size: .94rem; }
+    .panel ul { margin-top: 12px; }
+    .panel-label { font-size: .73rem; font-weight: 750; color: var(--blue); margin-bottom: 6px; }
+    .table-wrap { margin-top: 20px; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: .9rem; line-height: 1.75; }
+    caption { text-align: left; color: var(--muted); font-size: .8rem; padding-bottom: 10px; }
+    th, td { border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; padding: 14px 15px; }
+    thead th { background: var(--wash); border-top: 1px solid var(--line); font-size: .83rem; }
+    tbody th { width: 25%; font-weight: 650; }
+    table .key { width: 25%; }
+    .cite { font-size: .78rem; white-space: nowrap; }
+    .cite a { text-decoration: none; }
+    figure { margin-top: 22px; }
+    figcaption { font-size: .82rem; color: var(--muted); margin-top: 12px; }
+    .architecture { display: grid; grid-template-columns: minmax(0, 1fr) 76px minmax(0, 1.13fr); padding: 24px; border: 1px solid var(--line); border-radius: 9px; background: var(--wash); align-items: center; }
+    .stack { min-width: 0; }
+    .stack-label { font-size: .79rem; font-weight: 750; margin-bottom: 10px; }
+    .node { padding: 17px 18px; background: white; border: 1px solid #b9cbe6; border-radius: 6px; }
+    .node.coach { border-color: #aacabd; }
+    .node p { font-size: .84rem; margin-top: 5px; color: var(--muted); }
+    .arrow-down { text-align: center; color: var(--muted); font-size: .77rem; padding: 7px 0; }
+    .arrow-down span { font-size: 1.2rem; vertical-align: middle; margin-right: 7px; }
+    .bridge { text-align: center; color: var(--blue); font-size: .73rem; line-height: 1.6; }
+    .bridge .arrow { display: block; font-size: 1.8rem; }
+    .ownership { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; }
+    .steps { list-style: none; padding: 0; counter-reset: step; margin-top: 22px; }
+    .steps > li { counter-increment: step; display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 14px; padding: 18px 0; border-bottom: 1px solid var(--line); }
+    .steps > li::before { content: counter(step, decimal-leading-zero); color: var(--blue); font-weight: 750; font-size: .83rem; padding-top: 3px; }
+    .steps h3 { margin: 0 0 6px; font-size: 1.08rem; }
+    .steps p { color: var(--muted); font-size: .94rem; }
+    .flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 18px; background: var(--wash); border: 1px solid var(--line); border-radius: 7px; margin-top: 20px; }
+    .flow span { font-size: .84rem; }
+    .flow .flow-item { background: white; border: 1px solid var(--line); border-radius: 4px; padding: 5px 9px; }
+    .mock { border: 1px solid #c5cfdd; border-radius: 9px; overflow: hidden; background: #f8fafc; font-size: .81rem; line-height: 1.7; }
+    .mock-bar { background: #e9edf3; padding: 10px 16px; display: flex; justify-content: space-between; gap: 12px; color: #455469; border-bottom: 1px solid #cbd4e0; }
+    .mock-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr); }
+    .mock-editor { padding: 18px; background: white; }
+    .mock-driver { padding: 18px; border-left: 1px solid #cbd4e0; background: #f5f8fd; }
+    .mock-title { font-weight: 750; margin-bottom: 12px; color: #253e64; }
+    .mock-subtitle { color: var(--muted); font-size: .74rem; font-weight: 500; display: block; }
+    .mock-code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; color: #4f647a; font-size: .8rem; line-height: 2; padding: 14px 0; border-block: 1px solid var(--line); margin-bottom: 16px; }
+    .bubble { background: white; border: 1px solid #cdd9e8; border-radius: 6px; padding: 12px; margin-top: 10px; }
+    .bubble-label { display: block; font-weight: 700; font-size: .72rem; color: var(--muted); margin-bottom: 4px; }
+    .mock-input { border: 1px solid #bccbdd; border-radius: 5px; padding: 10px 12px; color: #506176; margin-top: 14px; background: #fff; }
+    .mock-coach { border-top: 1px solid #b9cdbf; padding: 18px; background: #f0f7f3; }
+    .mock-coach .mock-title { color: var(--green); }
+    .mock-coach p { font-size: .86rem; }
+    .mock-action { display: inline-block; border: 1px solid #b2c4bb; border-radius: 4px; padding: 3px 8px; margin: 10px 5px 0 0; background: white; color: #355b4c; }
+    .checklist { margin-top: 18px; }
+    .checklist li { padding-left: 3px; }
+    .sources { padding-left: 1.5em; font-size: .88rem; }
+    .sources li { padding: 10px 0; border-bottom: 1px solid var(--line); }
+    .sources p { margin-top: 4px; color: var(--muted); font-size: .81rem; }
+    .version-note { font-size: .83rem; color: var(--muted); margin-top: 20px; }
+    footer { margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--line); color: var(--muted); font-size: .83rem; }
+    .related { display: flex; flex-wrap: wrap; gap: 10px 20px; margin-top: 12px; }
+    .diagram-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 9px; background: #fff; }
+    .diagram { display: block; width: 100%; height: auto; min-width: 980px; }
+    .diagram text { fill: var(--ink); font-family: inherit; text-anchor: middle; }
+    .diagram .box { fill: var(--blue-wash); stroke: #a8bedb; stroke-width: 1.4; }
+    .diagram .box.coach { fill: var(--green-wash); stroke: #94bcaa; }
+    .diagram .box.report { fill: var(--amber-wash); stroke: #c3ad88; }
+    .diagram .box.plain { fill: white; stroke: #adb9cb; }
+    .diagram .group { fill: #f8fafd; stroke: #ccd6e3; stroke-dasharray: 5 5; }
+    .diagram .label { font-size: 16px; font-weight: 700; }
+    .diagram .detail { font-size: 12px; fill: var(--muted); }
+    .diagram .caption { font-size: 14px; font-weight: 700; fill: var(--blue); }
+    .diagram .edge { fill: none; stroke: #697b94; stroke-width: 1.7; }
+    .diagram .life { fill: none; stroke: #bec9d9; stroke-width: 1.2; stroke-dasharray: 5 5; }
+    .diagram .message { font-size: 13px; fill: #3d526e; }
+    .diagram .band { fill: #eff4fa; }
+    .overview-diagram { --ink: #202d40; --muted: #536379; min-width: 1000px; }
+    .overview-diagram .node.driver { --actor: #6b4990; --tint: #f5effa; }
+    .overview-diagram .node.coach { --actor: #216451; --tint: #eef8f3; }
+    .overview-diagram .node.neutral { --actor: #50657b; --tint: #f1f5fa; }
+    .overview-diagram .node.report { --actor: #805415; --tint: #fff7e9; }
+    .overview-diagram .node rect { fill: var(--tint); stroke: var(--actor); stroke-opacity: .5; }
+    .overview-diagram .node-tag { font-size: 12px; font-weight: 700; fill: var(--actor); }
+    .overview-diagram .node-title { font-size: 16px; font-weight: 700; }
+    .overview-diagram .node-detail { font-size: 12px; fill: var(--muted); }
+    .overview-diagram .edge { stroke: #66778e; stroke-width: 1.8; }
+    .overview-diagram .edge-label { font-size: 11px; fill: var(--muted); }
+    .code-panel { margin-top: 20px; border: 1px solid #ccd6e3; border-radius: 8px; overflow: hidden; }
+    .code-panel summary { padding: 13px 17px; cursor: pointer; background: #f0f4f9; font-weight: 650; font-size: .87rem; }
+    .code-panel summary:focus-visible { outline-offset: -4px; }
+    .code-panel pre { margin: 0; border: 0; border-radius: 0; background: #fafbfd; font-size: .9rem; }
+    .code-note { padding: 11px 17px; border-top: 1px solid var(--line); font-size: .8rem; color: var(--muted); background: white; }
+    .code-controls { display: flex; justify-content: flex-end; margin-top: 18px; }
+    .interactive { display: none; }
+    .js .interactive { display: inline-flex; }
+    .schema-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-top: 20px; }
+    .schema-grid > div { min-width: 0; padding: 18px; border: 1px solid var(--line); border-radius: 8px; }
+    .schema-grid h3 { margin: 0 0 10px; font-size: 1.05rem; }
+    .schema-grid p { font-size: .87rem; }
+    @media screen and (max-width: 1120px) {
+      .layout { grid-template-columns: 166px minmax(0, 1fr); gap: 30px; padding: 40px 28px 0; }
+      .topbar { padding: 20px 28px; }
+      .architecture { padding: 18px; grid-template-columns: minmax(0, 1fr) 60px minmax(0, 1fr); }
+      .node { padding: 14px; }
+    }
+    @media screen and (max-width: 900px) {
+      .layout { display: block; max-width: 800px; padding: 24px 28px 0; }
+      .toc { position: static; max-height: none; overflow: visible; padding: 0 0 24px; margin-bottom: 30px; border-bottom: 1px solid var(--line); }
+      .toc ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 12px; }
+      .toc li + li { margin-top: 0; }
+      .toc-note { display: none; }
+    }
+    @media screen and (max-width: 600px) {
+      body { font-size: 15px; }
+      .topbar { padding: 17px 20px; gap: 10px; }
+      .brand { font-size: 1.2rem; }
+      .date { display: none; }
+      button { font-size: .75rem; padding: 7px 9px; }
+      .layout { padding: 20px 20px 0; }
+      .toc ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .toc a { font-size: .78rem; gap: 6px; }
+      h1 { font-size: 2.2rem; }
+      h2 { font-size: 1.5rem; }
+      h3 { font-size: 1.15rem; }
+      .lead { font-size: 1rem; }
+      .eyebrow { font-size: .7rem; }
+      .intro { padding-bottom: 30px; }
+      .chapter { padding-top: 30px; }
+      .chapter + .chapter { margin-top: 32px; }
+      .two-up, .architecture, .mock-body, .schema-grid { grid-template-columns: 1fr; }
+      .panel { padding: 18px; }
+      .note { padding: 16px 18px; }
+      .architecture { padding: 16px; }
+      .bridge { padding: 13px 0; display: flex; align-items: center; justify-content: center; gap: 15px; }
+      .bridge .arrow { transform: rotate(90deg); }
+      .mock-driver { border-left: 0; border-top: 1px solid #cbd4e0; }
+      .mock-bar { flex-direction: column; gap: 1px; }
+      .mock-editor, .mock-driver, .mock-coach { padding: 16px; }
+      table, tbody { display: block; width: 100%; }
+      caption { display: block; }
+      thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+      tbody tr { display: block; padding: 16px; border: 1px solid var(--line); border-radius: 7px; }
+      tbody tr + tr { margin-top: 12px; }
+      tbody th, tbody td { display: block; width: auto; border: 0; padding: 0; }
+      tbody th { font-size: 1rem; margin-bottom: 9px; }
+      tbody td + td { margin-top: 9px; }
+      td[data-label]::before { content: attr(data-label) " · "; color: var(--muted); font-size: .78rem; }
+      pre { padding: 16px; font-size: .86rem; }
+      .steps > li { gap: 8px; grid-template-columns: 26px minmax(0, 1fr); }
+      .flow { display: block; }
+      .flow span { display: block; text-align: center; }
+      .flow .flow-arrow { transform: rotate(90deg); padding: 3px 0; }
+    }
+    @page { size: A4 landscape; margin: 13mm; }
+    @media print {
+      body { font-size: 10pt; line-height: 1.65; color: #182131; }
+      .skip, .toc, .top-actions, .back-top, .code-controls, .interactive, .js .interactive { display: none; }
+      .topbar { display: block; padding: 0 0 10px; }
+      .brand { font-size: 14pt; }
+      .layout { display: block; max-width: none; padding: 20px 0 0; }
+      main { padding: 0; }
+      h1 { font-size: 29pt; }
+      h2 { font-size: 18pt; margin-bottom: 12px; }
+      h3 { font-size: 13pt; margin-top: 20px; }
+      .lead { font-size: 11pt; }
+      .intro { padding-bottom: 24px; }
+      .chapter { padding-top: 24px; }
+      .chapter + .chapter { margin-top: 26px; }
+      h1, h2, h3, h4, .section-number, caption, .stack-label { break-after: avoid; }
+      p, li { orphans: 3; widows: 3; }
+      a { color: inherit; }
+      .panel, .note, .steps > li, tr, .sources li { break-inside: avoid; }
+      .two-up { display: block; }
+      .two-up > .panel + .panel { margin-top: 12px; }
+      .architecture { padding: 16px; grid-template-columns: minmax(0, 1fr) 58px minmax(0, 1fr); break-inside: avoid; }
+      .node { padding: 12px; }
+      .node p, .panel p, .panel li, .steps p, .note p { font-size: 9.5pt; }
+      .arrow-down { padding: 4px 0; }
+      table { font-size: 9pt; }
+      th, td { padding: 9px 10px; }
+      thead { display: table-header-group; }
+      pre { font-size: 9pt; padding: 14px; break-inside: avoid; }
+      .diagram-wrap { overflow: visible; break-inside: avoid; }
+      .diagram { min-width: 0; max-height: 142mm; }
+      .code-panel pre { font-size: 8.5pt; break-inside: auto; }
+      .code-panel summary { break-after: avoid; }
+      details::details-content { content-visibility: visible; }
+      .code-note { font-size: 8.5pt; }
+      .mock { font-size: 9pt; break-inside: avoid; }
+      .mock-coach p { font-size: 9.5pt; }
+      .mock-editor, .mock-driver, .mock-coach { padding: 12px; }
+      .sources { font-size: 9pt; }
+      .sources p, .small, .reading-note, .version-note, figcaption { font-size: 9pt; }
+      footer { margin-top: 24px; font-size: 9pt; }
+    }
+  </style>
+</head>
+<body id="top">
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="topbar">
+    <div class="brand">wellactually</div>
+    <div class="top-actions">
+      <time class="date" datetime="2026-09-12">Revised September 12, 2026</time>
+      <button class="interactive" type="button" id="print-button">Print / Save PDF</button>
+    </div>
+  </header>
+  <div class="layout">
+    <nav class="toc" aria-label="Document contents">
+      <p class="toc-label">TECHNICAL DESIGN</p>
+      <ol>
+        <li><a href="#direction"><span>01</span>Design Scope</a></li>
+        <li><a href="#system-overview"><span>02</span>System Overview</a></li>
+        <li><a href="#architecture"><span>03</span>Modules &amp; Contracts</a></li>
+        <li><a href="#driver"><span>04</span>Native Driver</a></li>
+        <li><a href="#session-access"><span>05</span>Local Logs &amp; Probe</a></li>
+        <li><a href="#coach"><span>06</span>Coach &amp; Scheduler</a></li>
+        <li><a href="#experience"><span>07</span>States, Sequences &amp; Exit</a></li>
+        <li><a href="#knowledge"><span>08</span>Knowledge Compilation</a></li>
+        <li><a href="#boundaries"><span>09</span>Permissions, Errors &amp; Storage</a></li>
+        <li><a href="#implementation"><span>10</span>Implementation &amp; Validation</a></li>
+        <li><a href="#alternatives"><span>11</span>Alternatives &amp; Open Questions</a></li>
+        <li><a href="#sources"><span>12</span>Official Sources &amp; References</a></li>
+      </ol>
+      <p class="toc-note">See 05 for the file probe, 06 for SDK read settings, 07 for execution flow, and 08 for reports.<br><br>AHP is a future alternative in 11, not a required MVP path.</p>
+    </nav>
+    <main id="main" tabindex="-1">
+      <header class="intro">
+        <p class="eyebrow">ENGINEERING DESIGN · UPDATED 2026.09.12</p>
+        <h1>Technical Design and Data Flow</h1>
+        <p class="lead"><strong>Keep the existing Driver. The Coach uses built-in SDK read tools to work with code and selected local work records.</strong></p>
+        <p class="lead">Discuss with the Coach first; close one deliberation turn when the human instructs the Driver. Bring observed results into joint review, then generate a Knowledge Compilation report from frozen records when pairing ends.</p>
+        <div class="badges" aria-label="Document status">
+          <span class="badge proposed">File-based hackathon MVP</span>
+          <span class="badge verified">Current CLI/SDK log reading and incremental detection verified</span>
+          <span class="badge pending">Coach read-only profile not yet verified</span>
+          <span class="badge">Voice Mode excluded</span>
+          <span class="badge proposed">Code examples: internal contracts and integration points</span>
+        </div>
+        <p class="reading-note">This revision reflects the September 12, 2026 file-access probe and hackathon scope decisions. We do not build an AHP connection or a separate Workspace Reader first. Measurements apply only to the current Copilot CLI/SDK session; they do not verify other harnesses, the future Coach's permissions, or its actual SDK integration. Code blocks illustrate contracts and core logic to implement.</p>
+        <p class="reading-note">Click a code-block heading to collapse or expand it. Scroll diagrams horizontally on narrow screens. All code expands for printing.</p>
+        <div class="code-controls"><button class="interactive" type="button" id="toggle-code" aria-expanded="true">Collapse all code</button></div>
+      </header>
+
+      <section class="chapter" id="direction" aria-labelledby="direction-title">
+        <p class="section-number">01 / SCOPE</p>
+        <h2 id="direction-title">Design Scope</h2>
+        <p class="section-intro">The target is developers who started building with coding agents but have had limited experience defining problems, making design judgments, and delegating work. Preserving human judgment and instruction matters more than reducing the effort of relaying requests or running tests.</p>
+        <div class="two-up">
+          <div class="panel">
+            <p class="panel-label">KEEP AS IS</p>
+            <h3>Native Copilot Experience</h3>
+            <ul>
+              <li>The input and response UI for talking to the Driver</li>
+              <li>The agent harness that researches, implements, and verifies</li>
+              <li>The harness's tool-approval and change-review UI</li>
+              <li>Models and work requests chosen directly by the user</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <p class="panel-label">WELLACTUALLY'S SCOPE</p>
+            <h3>Human–Coach Conversation</h3>
+            <ul>
+              <li>A Driver Custom Agent and a separate Coach UI</li>
+              <li>Coach conversation that can begin before Driver binding</li>
+              <li>Path and session verification for the selected local Driver log when delegating work</li>
+              <li>A read-only configuration for built-in SDK file-read, listing, and search tools</li>
+              <li>Relevant context construction and proactive Coach invocation</li>
+              <li>Permission limits, duplicate-question suppression, and connection and cost status</li>
+              <li>Pairing state, post-session knowledge compilation, and HTML saving</li>
+            </ul>
+          </div>
+        </div>
+        <p class="note"><strong>MVP reductions:</strong> No dedicated Workspace Reader or general-purpose session Reader framework. Reuse existing SDK tools for code and log reads; start with small helpers for path verification, change notifications, and incremental JSONL processing needed for precise turn tracking and automatic interventions. Do not duplicate all raw content in a separate database.</p>
+        <div class="note">
+          <strong>The human instructs the Driver directly.</strong>
+          <p>The Coach may point out missing conditions or explain options. It does not complete and forward a final instruction, or become a proxy requester that executes after approval. Coach agreement is not a prerequisite for execution.</p>
+        </div>
+        <h3>Verification and Feasibility</h3>
+        <p>A feature in official documentation or a path in public source code does not by itself establish that the product integration works in the currently installed VS Code.</p>
+        <div class="table-wrap">
+          <table>
+            <caption>Status terms in this document</caption>
+            <thead><tr><th class="key" scope="col">Term</th><th scope="col">Meaning</th><th scope="col">Current scope</th></tr></thead>
+            <tbody>
+              <tr><th scope="row"><span class="badge verified">Local measurement</span></th><td data-label="Meaning">Read the current session's actual file and detected new output.</td><td data-label="Scope">JSONL record reading, toolCallId correlation, detection about 249ms after output, and rereading after watcher exit</td></tr>
+              <tr><th scope="row"><span class="badge proposed">MVP design</span></th><td data-label="Meaning">An implementation direction selected on the basis of measurements.</td><td data-label="Scope">Built-in SDK read/search, selected Driver log, minimal change trigger, and separately frozen report input</td></tr>
+              <tr><th scope="row"><span class="badge pending">Verification needed</span></th><td data-label="Meaning">Not established by this probe.</td><td data-label="Scope">Read-only tool and path permissions, other Copilot harnesses, large outputs, log rotation, and Host restart</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="system-overview" aria-labelledby="system-overview-title">
+        <p class="section-number">02 / SYSTEM OVERVIEW</p>
+        <h2 id="system-overview-title">System Overview</h2>
+        <p class="section-intro">Reuse the existing Driver's local records and the current code workspace. File changes trigger coaching; actual reads use SDK tools and only the incremental processing needed. Freeze post-session Compiler input separately.</p>
+        <figure aria-labelledby="system-overview-caption">
+          <div class="diagram-wrap" tabindex="0" role="region" aria-label="Overall software architecture. Scroll horizontally on narrow screens.">
+            <svg class="diagram overview-diagram" viewBox="0 0 1200 730" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="arch-svg-title arch-svg-desc">
+              <title id="arch-svg-title">Code, Driver records, Coach, and reports in the file-based MVP</title>
+              <desc id="arch-svg-desc">The human gives instructions in the existing Driver UI. Select the Driver's local session log, detect file changes, and bring needed records into context. The Coach uses SDK read/search tools, once verified, to read the current workspace and shared log material. Used evidence and human–Coach conversations enter the Journal and are frozen at exit. The Compiler uses only this frozen input to produce report data; the extension renders and saves HTML. AHP and a separate Workspace Reader are not required for the MVP.</desc>
+              <defs><marker id="arch-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#66778e"/></marker></defs>
+              <rect x="20" y="30" width="325" height="660" rx="12" fill="#f5f1fa" stroke="#ded2eb"/>
+              <rect x="375" y="30" width="425" height="660" rx="12" fill="#f1f7f4" stroke="#ccddd4"/>
+              <rect x="845" y="30" width="335" height="660" rx="12" fill="#f8f9fc" stroke="#d8e1ec"/>
+              <text class="node-tag" x="182" y="60">Native VS Code / Copilot</text>
+              <text class="node-tag" x="587" y="60">Wellactually extension · UI + Host</text>
+              <text class="node-tag" x="1012" y="60">Separate AI sessions + report artifacts</text>
+              <g aria-hidden="true">
+                <path class="edge" d="M182 183 V275" marker-start="url(#arch-arrow)" marker-end="url(#arch-arrow)"/>
+                <path class="edge" d="M182 365 V468" marker-end="url(#arch-arrow)"/>
+                <path class="edge" d="M320 514 H365 V320 H405" marker-end="url(#arch-arrow)"/>
+                <path class="edge" d="M770 140 H875" marker-start="url(#arch-arrow)" marker-end="url(#arch-arrow)"/>
+                <path class="edge" d="M587 275 V183" marker-end="url(#arch-arrow)"/>
+                <path class="edge" d="M587 365 V468" marker-end="url(#arch-arrow)"/>
+                <path class="edge" d="M770 140 H821 V442 H685 V468" marker-end="url(#arch-arrow)"/>
+                <path class="edge" d="M770 513 H875" marker-end="url(#arch-arrow)"/>
+                <path class="edge" d="M1012 560 V601" marker-end="url(#arch-arrow)"/>
+                <path class="edge" d="M1150 139 H1190 V710 H182 V664" marker-end="url(#arch-arrow)"/>
+                <path class="edge" d="M182 710 H10 V514 H45" marker-end="url(#arch-arrow)"/>
+                <circle cx="182" cy="710" r="3" fill="#66778e"/>
+              </g>
+              <g class="node driver">
+                <rect x="45" y="95" width="275" height="88" rx="9"/>
+                <text class="node-tag" x="182" y="119">Existing Driver UI</text>
+                <text class="node-title" x="182" y="145">Existing Copilot Driver UI</text>
+                <text class="node-detail" x="182" y="167">Human input, sending, and approval</text>
+                <rect x="45" y="275" width="275" height="90" rx="9"/>
+                <text class="node-tag" x="182" y="299">Existing runtime</text>
+                <text class="node-title" x="182" y="325">Existing Driver Runtime</text>
+                <text class="node-detail" x="182" y="348">Measured: Copilot CLI / SDK</text>
+                <rect x="45" y="468" width="275" height="92" rx="9"/>
+                <text class="node-tag" x="182" y="492">Selected session records</text>
+                <text class="node-title" x="182" y="519">events.jsonl</text>
+                <text class="node-detail" x="182" y="542">Requests / responses / tool args and results</text>
+              </g>
+              <g class="node coach">
+                <rect x="405" y="95" width="365" height="88" rx="9"/>
+                <text class="node-tag" x="587" y="119">WebviewView + Extension Host</text>
+                <text class="node-title" x="587" y="145">Coach UI · Session Controller</text>
+                <text class="node-detail" x="587" y="167">Questions and answers / exit / connection status</text>
+                <rect x="405" y="275" width="365" height="90" rx="9"/>
+                <text class="node-tag" x="587" y="299">Observation, context, and intervention control</text>
+                <text class="node-title" x="587" y="325">File Trigger · Context Builder</text>
+                <text class="node-detail" x="587" y="348">Minimal increments / deduplication / call limits</text>
+              </g>
+              <g class="node neutral">
+                <rect x="405" y="468" width="365" height="92" rx="9"/>
+                <text class="node-tag" x="587" y="492">Available coverage frozen at session exit</text>
+                <text class="node-title" x="587" y="519">Conversation · Evidence · Decisions</text>
+                <text class="node-detail" x="587" y="542">Driver records + code reads + conversation and decisions</text>
+              </g>
+              <g class="node coach">
+                <rect x="875" y="95" width="275" height="88" rx="9"/>
+                <text class="node-tag" x="1012" y="119">GitHub Copilot SDK</text>
+                <text class="node-title" x="1012" y="145">Independent Coach Session</text>
+                <text class="node-detail" x="1012" y="167">SDK file read/search + role instructions</text>
+              </g>
+              <g class="node report">
+                <rect x="875" y="468" width="275" height="92" rx="9"/>
+                <text class="node-tag" x="1012" y="492">Separate post-session job · proposed</text>
+                <text class="node-title" x="1012" y="519">Knowledge Compiler</text>
+                <text class="node-detail" x="1012" y="542">Returns structured report data</text>
+                <rect x="875" y="601" width="275" height="63" rx="9"/>
+                <text class="node-title" x="1012" y="628">HTML Report</text>
+                <text class="node-detail" x="1012" y="650">Extension validation, template, optional save</text>
+              </g>
+              <text class="edge-label" x="182" y="230">Existing UI and session link</text>
+              <text class="edge-label" x="182" y="418">Local record storage</text>
+              <text class="edge-label" x="387" y="408">File change / increment</text>
+              <text class="edge-label" x="675" y="230">Relevant context → coaching check</text>
+              <text class="edge-label" x="591" y="418">Observed evidence</text>
+              <text class="edge-label" x="738" y="432">Conversation</text>
+              <text class="edge-label" x="822" y="499">Evidence</text>
+              <text class="edge-label" x="1086" y="585">Schema check</text>
+              <text class="node-detail" x="1012" y="259">No Coach → Driver execution path</text>
+              <text class="node-detail" x="1012" y="285">No edit, shell, or Driver-control tools</text>
+              <text class="node-detail" x="1012" y="332">AHP is a future alternative</text>
+              <text class="node-detail" x="1012" y="358">SDK tools, no separate Reader</text>
+              <text class="node-detail" x="1012" y="382">Read-only profile still needs verification</text>
+              <g class="node neutral">
+                <rect x="45" y="601" width="275" height="63" rx="9"/>
+                <text class="node-title" x="182" y="628">Current Code Workspace</text>
+                <text class="node-detail" x="182" y="650">Built-in SDK read/search tools</text>
+              </g>
+              <text class="node-detail" x="587" y="618">Pause or exit → stop automatic interventions</text>
+              <text class="node-detail" x="587" y="643">Disclose missing records and connection failures</text>
+              <text class="edge-label" x="626" y="700">Coach SDK reads · authorized code and log scope only</text>
+            </svg>
+          </div>
+          <figcaption id="system-overview-caption">The diagram emphasizes the Coach's data-access paths. Driver code changes and execution keep their existing UI and permissions. Current log-file reading and change detection are verified; the new Coach read profile and other harness support are not.</figcaption>
+        </figure>
+      </section>
+
+      <section class="chapter" id="architecture" aria-labelledby="architecture-title">
+        <p class="section-number">03 / MODULES &amp; CONTRACTS</p>
+        <h2 id="architecture-title">Modules and Data Contracts</h2>
+        <p class="section-intro">Do not duplicate existing Driver execution. Read the workspace with built-in SDK tools, and attach needed records from the selected local session log and actual read results to the Journal. The Controller manages state and triggers; the Compiler receives only input frozen at exit.</p>
+        <figure aria-labelledby="architecture-caption">
+          <div class="diagram-wrap" tabindex="0" role="region" aria-label="Module structure and data-transfer paths">
+            <svg class="diagram" viewBox="0 0 1230 650" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="modules-title modules-desc">
+              <title id="modules-title">Existing Driver and file-based Coach and report pipeline</title>
+              <desc id="modules-desc">The existing Driver executes human instructions and leaves code and session logs. Small file helpers in the Controller attach new records from the selected log to the Journal and trigger coaching. The Coach Runtime reads current code with built-in SDK tools and records needed read results in the Journal. After exit, the Compiler processes only a frozen snapshot.</desc>
+              <defs><marker id="module-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#697b94"/></marker></defs>
+              <rect class="group" x="20" y="185" width="1190" height="435" rx="12"/>
+              <text class="caption" x="615" y="28">VS Code-owned · Native Driver</text>
+              <text class="caption" x="180" y="205">Wellactually modules</text>
+              <g aria-hidden="true">
+                <path class="edge" d="M280 91 H480" marker-start="url(#module-arrow)" marker-end="url(#module-arrow)"/>
+                <path class="edge" d="M750 91 H930" marker-end="url(#module-arrow)"/>
+                <path class="edge" d="M615 127 V225" marker-end="url(#module-arrow)"/>
+                <path class="edge" d="M330 261 H480" marker-end="url(#module-arrow)"/>
+                <path class="edge" d="M180 297 V355" marker-start="url(#module-arrow)" marker-end="url(#module-arrow)"/>
+                <path class="edge" d="M250 297 V320 H615"/>
+                <path class="edge" d="M615 297 V355" marker-end="url(#module-arrow)"/>
+                <circle cx="615" cy="320" r="3" fill="#697b94"/>
+                <path class="edge" d="M750 391 H840 V261 H930" marker-end="url(#module-arrow)"/>
+                <path class="edge" d="M1065 297 V355" marker-end="url(#module-arrow)"/>
+                <path class="edge" d="M615 427 V465 H180 V510" marker-end="url(#module-arrow)"/>
+                <path class="edge" d="M330 546 H480" marker-end="url(#module-arrow)"/>
+                <path class="edge" d="M750 546 H930" marker-end="url(#module-arrow)"/>
+                <path class="edge" d="M1200 391 H1220 V91 H1200" marker-end="url(#module-arrow)"/>
+              </g>
+              <rect class="box" x="30" y="55" width="250" height="72" rx="7"/><text class="label" x="155" y="86">Native Copilot Chat</text><text class="detail" x="155" y="110">Direct human instruction and approval</text>
+              <rect class="box" x="480" y="55" width="270" height="72" rx="7"/><text class="label" x="615" y="86">Existing Driver Runtime</text><text class="detail" x="615" y="110">Measured: Copilot CLI / SDK</text>
+              <rect class="box" x="930" y="55" width="270" height="72" rx="7"/><text class="label" x="1065" y="86">Workspace</text><text class="detail" x="1065" y="110">Code changes and tests</text>
+              <text class="detail" x="707" y="163">Local file records</text>
+              <text class="detail" x="1075" y="166">Built-in SDK read/search</text>
+              <rect class="box coach" x="30" y="225" width="300" height="72" rx="7"/><text class="label" x="180" y="254">Pairing Controller</text><text class="detail" x="180" y="280">State, turns, binding, and exit</text>
+              <rect class="box coach" x="480" y="225" width="270" height="72" rx="7"/><text class="label" x="615" y="254">Selected Driver Log</text><text class="detail" x="615" y="280">events.jsonl · needed new segments</text>
+              <text class="detail" x="404" y="247">Select / detect changes</text>
+              <rect class="box coach" x="930" y="225" width="270" height="72" rx="7"/><text class="label" x="1065" y="254">Context Builder / Scheduler</text><text class="detail" x="1065" y="280">Evidence, request priority, and budget</text>
+              <rect class="box plain" x="30" y="355" width="300" height="72" rx="7"/><text class="label" x="180" y="384">Coach WebviewView</text><text class="detail" x="180" y="410">Input, responses, and status</text>
+              <rect class="box coach" x="480" y="355" width="270" height="72" rx="7"/><text class="label" x="615" y="384">Evidence Journal / Store</text><text class="detail" x="615" y="410">Source, order, version, confirmed decisions</text>
+              <rect class="box coach" x="930" y="355" width="270" height="72" rx="7"/><text class="label" x="1065" y="384">Coach Runtime / Policy</text><text class="detail" x="1065" y="410">Built-in read tools, read scope, and Lease</text>
+              <text class="detail" x="422" y="452">User exit → Journal @ cutoff</text>
+              <rect class="box report" x="30" y="510" width="300" height="72" rx="7"/><text class="label" x="180" y="539">Frozen EvidenceSnapshot</text><text class="detail" x="180" y="565">Immutable input at exit</text>
+              <rect class="box report" x="480" y="510" width="270" height="72" rx="7"/><text class="label" x="615" y="539">Knowledge Compiler</text><text class="detail" x="615" y="565">Snapshot → structured data</text>
+              <rect class="box report" x="930" y="510" width="270" height="72" rx="7"/><text class="label" x="1065" y="539">Validator / Renderer / Export</text><text class="detail" x="1065" y="565">Validate → HTML → user-selected save</text>
+              <text class="detail" x="615" y="639">File-access PoC only · SDK read profile unverified · No AHP / Workspace Reader added to the MVP</text>
+            </svg>
+          </div>
+          <figcaption id="architecture-caption">Lines show major data and control paths. See <a href="#experience">07 Sequences</a> for time-ordered requests and responses. The Webview owns UI; the Extension Host owns the Controller, observation, scheduling, and storage. The SDK connects to a separate Copilot runtime.</figcaption>
+        </figure>
+        <details class="code-panel" open>
+          <summary>Proposed directories · dependency direction</summary>
+          <pre><code>src/
+  extension.ts                 # Dependency assembly, registration, disposal
+  domain/pairing.ts             # SDK-independent state and turns
+  ui/coachView.ts               # Webview message validation and rendering
+  pairing/controller.ts        # Per-session serialization, Lease, and exit
+  driver/localLog.ts          # Small helpers: selected log, cursor, change notices
+  context/journal.ts           # Ordering, deduplication, provenance
+  context/snapshots.ts         # Immutable snapshots, scope, hashes
+  coach/scheduler.ts           # Direct-question priority, single flight
+  coach/runtime.ts             # SDK creation, tools, cancellation, events
+  compilation/compiler.ts     # Frozen input → report data
+  compilation/schema.ts       # Report JSON Schema and type definitions
+  compilation/validate.ts     # Schema, provenance, and status checks
+  compilation/render.ts       # Fixed HTML template
+  compilation/export.ts       # Save dialog and write to the selected path
+
+UI → Controller → domain / ports
+Reuse built-in SDK tools for workspace reads
+Exclude AHP adapters and a separate Workspace Reader from the MVP
+Compiler → FrozenSnapshot (read); no Driver client access</code></pre>
+          <p class="code-note">These paths describe proposed modules, not source files already created in the repository.</p>
+        </details>
+        <details class="code-panel" open>
+          <summary>TypeScript · core domain DTOs (Wellactually internal contract)</summary>
+          <pre><code class="language-typescript">type PairingStatus =
+  | "active" | "paused" | "closing" | "closed" | "close_failed";
+type IterationStage = "discussing" | "driver_pending" | "reviewing";
+
+interface DriverBinding {
+  bindingId: string;
+  generation: number;
+  workspaceUri: string;
+  logFileUri: string;
+  sdkSessionId: string;
+  format: "copilot-sdk-events-jsonl";
+}
+
+interface PairingSession {
+  pairingId: string;
+  status: PairingStatus;
+  stage: IterationStage;
+  iteration: number;
+  epoch: number;
+  revision: number;  // External input/change version; separate from own tool results
+  driver: DriverBinding | null;  // The Coach can start without a binding
+}
+
+interface Evidence {
+  id: string;
+  source: "human" | "coach" | "driver" | "tool" | "file";
+  sourceRef: string;
+  sourceVersion: string;
+  recordedAt: string;
+  completeness: "complete" | "partial" | "in_progress";
+  text: string;
+}
+
+interface Decision {
+  id: string;
+  status: "proposed" | "human_confirmed" | "revised";
+  choice: string;
+  reason: string;
+  evidenceIds: readonly string[];
+}
+
+interface EvidenceSnapshot {
+  readonly snapshotId: string;
+  readonly pairingId: string;
+  readonly revision: number;
+  readonly cutoff: number;  // Last included sequence number in the extension Journal
+  readonly sha256: string;
+  readonly coverage: {
+    readonly driver: "unbound" | "current" | "partial";
+    readonly gaps: readonly string[];
+  };
+  readonly evidence: readonly Readonly&lt;Evidence&gt;[];
+  readonly decisions: readonly Readonly&lt;Decision&gt;[];
+}</code></pre>
+          <p class="code-note"><code>pairingId</code> differs from the log's SDK sessionId. Bind only after checking the selected file's session metadata; a filename alone does not identify the current Driver. <code>cutoff</code> is the inclusion boundary in our Journal, distinct from a file byte cursor.</p>
+        </details>
+        <div class="schema-grid">
+          <div><h3>Snapshot Immutability</h3><p>Validate and serialize copied DTOs, then place them in read-only storage. A type-level <code>readonly</code> does not provide runtime immutability. The hash checks input integrity, not factual truth.</p></div>
+          <div><h3>Independent States</h3><p>Manage pairing, Driver work, and report Job states separately. Driver completion does not end pairing; Compiler failure is not Native work failure.</p></div>
+        </div>
+        <h3>Verified and Supported Environments</h3>
+        <p>File access was verified in the current conversation's <strong>Copilot CLI/SDK session</strong>. Do not assume other Native Copilot harnesses share its paths, format, or retention coverage. Target the verified execution mode first for the hackathon and keep the existing Driver UI. Recompare file access and AHP when widening support. <sup class="cite"><a href="#source-01" aria-label="Source 1: harness distinctions">[1]</a></sup></p>
+        <div class="ownership">
+          <span class="badge">UI: existing Driver UI</span>
+          <span class="badge verified">Measured: Copilot CLI/SDK</span>
+          <span class="badge">Role: wellactually Driver</span>
+          <span class="badge">Model: user-selected</span>
+        </div>
+      </section>
+
+      <section class="chapter" id="driver" aria-labelledby="driver-title">
+        <p class="section-number">04 / NATIVE DRIVER</p>
+        <h2 id="driver-title">Driver Binding and Instruction Boundaries</h2>
+        <p class="section-intro">The Driver is not deliberately weakened. It researches and implements competently within the delegated scope, while returning consequential product-policy and scope changes to the human.</p>
+        <h3>Packaged Driver Agent</h3>
+        <p><code>contributes.chatAgents</code> can provide an agent file from the extension package; users need not copy it into each project. The following is part of a future package configuration, not a setting currently applied. <sup class="cite"><a href="#source-02" aria-label="Source 2: Custom Agent contribution">[2]</a></sup></p>
+        <pre><code>{
+  "contributes": {
+    "chatAgents": [
+      { "path": "./agents/driver.agent.md" }
+    ]
+  }
+}</code></pre>
+        <p class="reading-note">Base the role body on the Driver persona instructions. Do not mix Coach instructions into shared project instructions that also apply to the Driver.</p>
+        <p class="note"><strong>Coach-first:</strong> The user first shares task context and scope with the Coach. Bind the selected session's log path when delegating to the Driver. Read existing records as initial context, but do not treat old instructions as new sends in the current turn.</p>
+        <div class="table-wrap">
+          <table>
+            <caption>Driver role and configuration boundaries</caption>
+            <thead><tr><th class="key" scope="col">Item</th><th scope="col">Design</th><th scope="col">Caution</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Work request</th><td data-label="Design">The human writes and sends it in the native Chat input.</td><td data-label="Caution">No separate Driver-send button in wellactually.</td></tr>
+              <tr><th scope="row">Implementation discretion</th><td data-label="Design">The Driver handles implementation details that do not change the goal.</td><td data-label="Caution">It does not also decide consequential design or policy changes for the human.</td></tr>
+              <tr><th scope="row">Tools and approval</th><td data-label="Design">Use the selected harness's tool settings and approval system.</td><td data-label="Caution">Persona text alone cannot enforce file or command permissions.</td></tr>
+              <tr><th scope="row">Coach relationship</th><td data-label="Design">Do not automatically inject the separate Coach conversation as Driver instructions.</td><td data-label="Caution">No indirect forwarding through Handoff, additional context, or shared instruction files.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note warning">
+          <strong>Do not assume an empty tool list means “deny every tool.”</strong>
+          <p>In the inspected Copilot Agent Host conversion source, a Custom Agent's empty <code>tools: []</code> becomes a value allowing all tools. Do not assume Local and Agent Host interpret settings identically; test the tools actually exposed. This is also a different layer from the SDK session's <code>availableTools</code> setting discussed below. <sup class="cite"><a href="#source-03" aria-label="Source 3: Custom Agent conversion">[3]</a></sup></p>
+        </div>
+      </section>
+
+      <section class="chapter" id="session-access" aria-labelledby="session-access-title">
+        <p class="section-number">05 / LOCAL LOGS &amp; PROBE</p>
+        <h2 id="session-access-title">Local Session Logs and File Probe</h2>
+        <p class="section-intro">Project code and Driver session records are different materials. Code and diffs describe implementation state; the selected session's JSONL describes requests, responses, and tool execution. Use these two file inputs first for the hackathon; consider other connections such as AHP only if they prove insufficient.</p>
+        <h3>September 12, 2026 File Probe</h3>
+        <div class="table-wrap">
+          <table>
+            <caption>Observations limited to the current Copilot CLI/SDK session</caption>
+            <thead><tr><th class="key" scope="col">Check</th><th scope="col">Measurement</th><th scope="col">Interpretation</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Existing records</th><td data-label="Measurement">About 19.7MB, 2,720 JSONL records, zero parse errors. Current user request found</td><td data-label="Interpretation">Retained conversation records were readable without having watched from the start</td></tr>
+              <tr><th scope="row">Work history</th><td data-label="Measurement">Observed user.message, assistant.message, and tool.execution_start / complete</td><td data-label="Interpretation">Tool arguments and result content/detailedContent fields exist and can be correlated by toolCallId</td></tr>
+              <tr><th scope="row">New output detection</th><td data-label="Measurement">Printed a UUID generated during execution. Detected the completion result about 249ms later with 100ms file polling</td><td data-label="Interpretation">File changes exposed a new result. One measurement, not a latency guarantee</td></tr>
+              <tr><th scope="row">Reread after watcher exit</th><td data-label="Measurement">Reopened the file and found the original arguments and result for the same toolCallId</td><td data-label="Interpretation">Read a retained file result, not merely a transient notification</td></tr>
+              <tr><th scope="row">Access method</th><td data-label="Measurement">Only Node file reading and change detection. No AHP connection or database query</td><td data-label="Interpretation">Established file-access feasibility in this environment, not the Coach permission configuration</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note warning"><strong>Not verified:</strong> Other Native Copilot harnesses' storage paths and formats, actual file access by a read-only Coach, external file references for large outputs, log rotation, and recovery after Host restart. The probe did not send system or authentication content to a model. It inspected structure and harmless test output rather than raw content; temporary watcher processes and scripts were cleaned up.</p>
+        <details class="code-panel">
+          <summary>JSON · file-probe result summary</summary>
+          <pre><code class="language-json">{
+  "scope": "current Copilot CLI/SDK session",
+  "recordsRead": 2720,
+  "invalidJsonLines": 0,
+  "toolStartCorrelated": true,
+  "toolResultMarkerFound": true,
+  "detectedAfterEmitMs": 249,
+  "pollIntervalMs": 100,
+  "retainedAfterWatcherExit": true,
+  "ahpConnectionUsed": false,
+  "databaseRead": false,
+  "coachReadOnlyProfileTested": false
+}</code></pre>
+          <p class="code-note">A measurement summary, not an SDK event payload. Session paths, identifiers, and log bodies are omitted from this shared document. Timings describe this single run.</p>
+        </details>
+        <h3>Minimal Binding Procedure</h3>
+        <ol class="steps">
+          <li><div><h3>Selected Log Identity</h3><p>Initially, the user specifies a log or selects a known path in a verified environment. Check the SDK sessionId and task context in session.start metadata; do not bind the Coach's own log. Do not start by building discovery and sharing across all session directories.</p></div></li>
+          <li><div><h3>History and New Instructions</h3><p>Use existing records as initial context and set a read cursor at a complete-line boundary. Only subsequent new user requests attach to the current deliberation turn.</p></div></li>
+          <li><div><h3>Reads and Invocation Triggers</h3><p>Allowing SDK read tools does not make the Coach automatically check for new files. Batch change notifications, read the needed segment, and let the Scheduler invoke the Coach when results are ready.</p></div></li>
+          <li><div><h3>Selected Evidence Retention</h3><p>Attach selected requests, responses, tool results, and code-read results actually used to the Journal. Do not send the entire original log on every request or duplicate it wholesale in another database.</p></div></li>
+        </ol>
+        <h3>File-Based Internal Contract</h3>
+        <p>These internal types are for small JSONL helpers, not AHP wire data or a general Reader interface. Validate original SDK event data at runtime and project only needed fields into evidence.</p>
+        <details class="code-panel" open>
+          <summary>TypeScript · selected log and incremental processing</summary>
+          <pre><code class="language-typescript">interface DriverLogRecord {
+  id: string;
+  type: string;
+  timestamp: string;
+  data: Record&lt;string, unknown&gt;;
+}
+
+interface LogCheckpoint {
+  bindingId: string;
+  generation: number;
+  fileIdentity: string;
+  completeOffset: number;  // Byte immediately after the last complete JSONL line
+  lastEventId?: string;
+}
+
+type DriverLogChange =
+  | {
+      kind: "changed";
+      size: number;
+      modifiedAt: string;
+    }
+  | { kind: "reset_required"; reason: string };</code></pre>
+          <p class="code-note">SDK event id, toolCallId, byte position, and Journal sequence number are distinct identifiers. Do not treat rotation, deletion, or a partially written line as a completed new event. Do not force another harness's format into this type.</p>
+        </details>
+        <details class="code-panel">
+          <summary>Node.js · selected-log change trigger</summary>
+          <pre><code class="language-javascript" data-api="node-log-watch">import { statSync, watchFile, unwatchFile } from "node:fs";
+
+function watchDriverLog(logFile, intervalMs, onChange) {
+  if (!Number.isFinite(intervalMs) || intervalMs &lt; 100) {
+    throw new Error("INVALID_LOG_POLL_INTERVAL");
+  }
+  const initial = statSync(logFile);
+  if (!initial.isFile()) throw new Error("LOG_FILE_REQUIRED");
+  let size = initial.size;
+  let modified = initial.mtimeMs;
+  const listener = current => {
+    if (current.dev !== initial.dev || current.ino !== initial.ino ||
+        current.size &lt; size ||
+        (current.size === size &amp;&amp; current.mtimeMs !== modified)) {
+      unwatchFile(logFile, listener);
+      onChange({ kind: "reset_required", reason: "log_replaced_or_rewritten" });
+      return;
+    }
+    if (current.size > size) {
+      size = current.size;
+      modified = current.mtimeMs;
+      onChange({
+        kind: "changed", size,
+        modifiedAt: current.mtime.toISOString()
+      });
+    }
+  };
+  watchFile(logFile, { interval: intervalMs }, listener);
+  return () => unwatchFile(logFile, listener);
+}</code></pre>
+          <p class="code-note">This signals file changes, not completion of JSONL parsing or a model invocation. The path is one preverified log; connect needed incremental processing and Scheduler invocation in the callback. The probe used 100ms polling; limit actual model-call frequency separately.</p>
+        </details>
+        <div class="flow" aria-label="Observation-data processing order">
+          <span class="flow-item">New segment of selected JSONL</span><span class="flow-arrow" aria-hidden="true">→</span>
+          <span class="flow-item">Session and line-boundary checks</span><span class="flow-arrow" aria-hidden="true">→</span>
+          <span class="flow-item">Record normalization and deduplication</span><span class="flow-arrow" aria-hidden="true">→</span>
+          <span class="flow-item">Journal commit</span><span class="flow-arrow" aria-hidden="true">→</span>
+          <span class="flow-item">EvidenceSnapshot</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <caption>Observation rules · data errors must not become successful completion</caption>
+            <thead><tr><th class="key" scope="col">Input</th><th scope="col">Handling</th><th scope="col">Effect on Coach and turns</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Initial records</th><td data-label="Handling">Read selected-session history as context; establish the baseline at a complete-line position</td><td data-label="Effect">Do not count old user requests as new instructions</td></tr>
+              <tr><th scope="row">Repeated reads</th><td data-label="Handling">Apply idempotently by binding, generation, and SDK event id. Use toolCallId to correlate calls and results</td><td data-label="Effect">Prevent repeated notifications, duplicate turn closure, and duplicate evidence</td></tr>
+              <tr><th scope="row">Partial lines / in-progress results</th><td data-label="Handling">Defer commit until the JSONL line is complete. Distinguish event completion from file-write completion</td><td data-label="Effect">A file change alone does not mean tool success</td></tr>
+              <tr><th scope="row">Deletion / rotation / interrupted writes</th><td data-label="Handling">Hold automatic evaluation → reverify file and session → reset the baseline as needed</td><td data-label="Effect">Disclose unrecovered coverage. Never silently switch logs</td></tr>
+              <tr><th scope="row">Different binding / old generation</th><td data-label="Handling">Reject and diagnose. Increment generation on rebinding</td><td data-label="Effect">Keep other workspaces' and earlier conversations' results out of the current Coach context</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <details class="code-panel">
+          <summary>JSON · normalized Journal entry</summary>
+          <pre><code class="language-json">{
+  "journalSeq": 42,
+  "pairingId": "pair-001",
+  "bindingId": "binding-002",
+  "generation": 2,
+  "eventKey": "binding-002:g2:sdk-event-42",
+  "evidence": {
+    "id": "ev-42",
+    "source": "tool",
+    "sourceRef": "sdk-session-A/toolCall-3",
+    "sourceVersion": "sdk-event-42",
+    "recordedAt": "2026-09-12T06:30:00Z",
+    "completeness": "complete",
+    "text": "Description-processing results differ by language"
+  }
+}</code></pre>
+          <p class="code-note">Fictional data. We define the <code>eventKey</code> format, Evidence IDs, and local sequence numbers. Derive them from SDK events and toolCallId values actually read; the model must not invent provenance.</p>
+        </details>
+        <div class="note">
+          <strong>File existence does not imply complete history recovery.</strong>
+          <p>Large outputs may reference separate files, and not every intermediate state is guaranteed to be retained. Check which paths, segments, and fields will be shared with SDK read tools; use only needed records as context. Unconditionally sending all raw content to a model was not verified in this probe.</p>
+        </div>
+        <h3>File-Based MVP Scope</h3>
+        <p>Do not infer Driver intent and investigation from code files alone. Conversely, do not assume a session log describes all current code.</p>
+        <div class="table-wrap">
+          <table>
+            <caption>Read materials and remaining checks</caption>
+            <thead><tr><th class="key" scope="col">Material</th><th scope="col">Use</th><th scope="col">Caution</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Current workspace</th><td data-label="Use">Read implementation, reference relationships, and code under review</td><td data-label="Caution">Reuse built-in SDK read/search. Initial scope is saved files; do not assume unsaved editor buffers are included</td></tr>
+              <tr><th scope="row">Selected Driver log</th><td data-label="Use">Link requests, responses, execution arguments, and results to turns</td><td data-label="Caution">Start with the verified JSONL format. Some fields and large-output bodies need further checks</td></tr>
+              <tr><th scope="row">Coach tool results and conversation</th><td data-label="Use">Record code actually read and reasons the user explained</td><td data-label="Caution">Not automatically merged into the Driver log. Do not watch the Coach's own log as Driver input</td></tr>
+              <tr><th scope="row">Journal and exit snapshot</th><td data-label="Use">Freeze used evidence, decisions, and observation coverage as report input</td><td data-label="Caution">Keep needed records, references, and content as observed, not copies of every original</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note warning">
+          <strong>AHP is a future option, not a prerequisite.</strong>
+          <p>Compare it when file access cannot supply required execution state, or when remote and multi-harness support and a stable query contract become necessary. This probe establishes file-access feasibility, not complete history recovery across every harness.</p>
+        </div>
+      </section>
+
+      <section class="chapter" id="coach" aria-labelledby="coach-title">
+        <p class="section-number">06 / COACH RUNTIME</p>
+        <h2 id="coach-title">Coach Runtime and Intervention Scheduling</h2>
+        <p class="section-intro">The proposed Coach uses a separate Copilot SDK runtime and conversation. Reuse the existing model and tool-calling loop, without assuming automatic sharing of the Native Driver's authentication, tools, or conversation.</p>
+        <h3>Persona, Context, and Permissions</h3>
+        <div class="table-wrap">
+          <table>
+            <caption>Three kinds of information provided to the Coach</caption>
+            <thead><tr><th class="key" scope="col">Kind</th><th scope="col">Content</th><th scope="col">Handling</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Role instructions</th><td data-label="Content">Problem definition, design reasoning, delegation design; exploration, debugging, and counterexamples as needed</td><td data-label="Handling">Add the existing Coach persona as separate role instructions.</td></tr>
+              <tr><th scope="row">Task context</th><td data-label="Content">Human requests, Driver observations, relevant code, and confirmed decisions</td><td data-label="Handling">Include source, session, turn, and file version. Do not treat quoted code as execution instructions.</td></tr>
+              <tr><th scope="row">Execution permissions</th><td data-label="Content">Readable information and callable tools</td><td data-label="Handling">Constrain them through extension and runtime configuration, not merely a persona instruction saying “do not modify.”</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Built-In SDK Read and Search Tools</h3>
+        <p>Set the Coach's working directory to the actual project. Allowlist only file-read, listing, and search tools verified in the target SDK; restrict the path and scope of shared Driver logs. Keep <code>read_context_snapshot</code> as a helper for prior decisions and selected records, without restricting the Coach to this single tool.</p>
+        <div class="table-wrap">
+          <table>
+            <caption>Separate read policies for Coach and Compiler</caption>
+            <thead><tr><th class="key" scope="col">Aspect</th><th scope="col">Coach</th><th scope="col">Knowledge Compiler</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Working directory</th><td data-label="Coach">Selected project</td><td data-label="Compiler">Isolated runtime-state path</td></tr>
+              <tr><th scope="row">File access</th><td data-label="Coach">Verified built-in SDK read/search plus explicitly shared log material</td><td data-label="Compiler">No new file reads or exploration. One snapshot from exit time</td></tr>
+              <tr><th scope="row">Changes and execution</th><td data-label="Coach">Exclude edit, shell, and Driver-send tools</td><td data-label="Compiler">Exclude all built-in tools; permit only result-data submission</td></tr>
+              <tr><th scope="row">State storage</th><td data-label="Coach">baseDirectory separate from the project</td><td data-label="Compiler">Separate context and memory for each Job</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <details class="code-panel" open>
+          <summary>SDK v1.0.13 · read tools and independent Coach session creation</summary>
+          <pre><code class="language-javascript" data-api="copilot-sdk">import { CopilotClient, RuntimeConnection, defineTool } from "@github/copilot-sdk";
+
+function createOwnedClient(host) {
+  return new CopilotClient({
+    connection: RuntimeConnection.forStdio(),
+    mode: "empty",
+    baseDirectory: host.isolatedDirectory,
+    workingDirectory: host.isolatedDirectory,
+    env: host.controlledRuntimeEnv,
+    useLoggedInUser: false,
+    gitHubToken: host.approvedToken
+  });
+}
+
+async function createCoachSession(client, host) {
+  const readTools = host.readOnlyBuiltinTools;
+  if (!Array.isArray(readTools) || readTools.length === 0 ||
+      !readTools.every(name => typeof name === "string" &amp;&amp;
+        /^builtin:[a-z0-9_.-]+$/i.test(name)) ||
+      typeof host.readOnlyPermissionHandler !== "function" ||
+      typeof host.workspaceDirectory !== "string" ||
+      host.workspaceDirectory.length === 0) {
+    throw new Error("VERIFIED_READ_PROFILE_REQUIRED");
+  }
+  const readSnapshot = defineTool("read_context_snapshot", {
+    description: "Read the context snapshot pinned by the host.",
+    parameters: {
+      type: "object",
+      properties: {},
+      additionalProperties: false
+    },
+    defer: "never",
+    skipPermission: true,
+    handler: (args, invocation) => {
+      if (args === null || typeof args !== "object" ||
+          Array.isArray(args) || Object.keys(args).length !== 0) {
+        throw new Error("EMPTY_ARGUMENT_OBJECT_REQUIRED");
+      }
+      invocation.signal?.throwIfAborted();
+      return {
+        resultType: "success",
+        textResultForLlm: host.readPinnedSnapshotJson()
+      };
+    }
+  });
+
+  return client.createSession({
+    model: host.model,
+    systemMessage: { mode: "append", content: host.coachPolicy },
+    workingDirectory: host.workspaceDirectory,
+    configDirectory: host.isolatedDirectory,
+    enableConfigDiscovery: false,
+    skipCustomInstructions: true,
+    enableOnDemandInstructionDiscovery: false,
+    enableFileHooks: false,
+    enableHostGitOperations: false,
+    enableSkills: false,
+    mcpServers: {},
+    customAgents: [],
+    skillDirectories: [],
+    pluginDirectories: [],
+    instructionDirectories: [],
+    tools: [readSnapshot],
+    availableTools: ["custom:read_context_snapshot", ...readTools],
+    excludedTools: ["mcp:*"],
+    onPermissionRequest: host.readOnlyPermissionHandler,
+    memory: { enabled: false },
+    enableSessionStore: false,
+    skipEmbeddingRetrieval: true,
+    embeddingCacheStorage: "in-memory",
+    mcpOAuthTokenStorage: "in-memory",
+    infiniteSessions: { enabled: false },
+    enableSessionTelemetry: false,
+    largeOutput: { enabled: false }
+  });
+}</code></pre>
+          <p class="code-note"><code>host.readOnlyBuiltinTools</code> is a list of names and behaviors actually verified in the target SDK; <code>readOnlyPermissionHandler</code> is an internal implementation that approves only reads within permitted paths and rejects everything else. Refuse startup without both. Actual SDK execution of this profile is not yet verified. The helper's <code>readPinnedSnapshotJson()</code> returns only the request's pinned context. <a href="#source-09">[9]</a> <a href="#source-11">[11]</a> <a href="#source-17">[17]</a></p>
+        </details>
+        <p class="note warning"><strong>Configuration alone does not verify read permissions.</strong> A working directory is not an access-control boundary. Verify read-tool names, path decisions, and permission callback behavior in practice; do not allowlist edit, shell, or delegation tools. Remove the blanket <code>builtin:*</code> exclusion for the Coach because it needs built-in read tools. Keep it for the Compiler. Apply <code>skipPermission: true</code> only to the helper that returns Host memory.</p>
+        <p class="reading-note">General file-read permission does not distinguish fields inside JSONL. Before providing an actual log to the model, check for nonshared instructions or authentication information and confirm external-transmission scope. Start with a controlled test session; small helpers can prepare only needed fields and segments. Do not share the entire SDK state directory.</p>
+        <p class="reading-note">This example uses an extension-owned stdio runtime. It guarantees neither OS sandboxing nor zero retention. <code>enableSessionStore: false</code> disables the shared session store; it does not eliminate every ordinary conversation record. Reregister tools and permission policy on creation and recovery, and apply a separate storage and deletion policy.</p>
+        <div class="table-wrap">
+          <table>
+            <caption>Actual SDK lifecycle APIs · pinned version</caption>
+            <thead><tr><th class="key" scope="col">Call / event</th><th scope="col">Meaning</th><th scope="col">Runtime responsibility</th></tr></thead>
+            <tbody>
+              <tr><th scope="row"><code>send()</code></th><td data-label="Meaning">Returns a message ID</td><td data-label="Responsibility">Do not treat it as response completion</td></tr>
+              <tr><th scope="row"><code>sendAndWait()</code></th><td data-label="Meaning">Waits for session.idle or session.error</td><td data-label="Responsibility">Serialize requests to the same session. May return undefined if there is no assistant message</td></tr>
+              <tr><th scope="row"><code>on()</code></th><td data-label="Meaning">Subscribes to events and returns an unsubscribe function</td><td data-label="Responsibility">Subscribe before sending; clean up at request end or disconnect</td></tr>
+              <tr><th scope="row"><code>abort()</code></th><td data-label="Meaning">Acknowledges cancellation of an owned SDK request</td><td data-label="Responsibility">Distinguish acknowledgment from settlement. Do not overlap the next pin/request before cancellation and idle are confirmed</td></tr>
+              <tr><th scope="row"><code>disconnect()</code></th><td data-label="Meaning">Detaches the session and clears local handlers; retains disk records</td><td data-label="Responsibility">The public cleanup method is disconnect, not session.close</td></tr>
+              <tr><th scope="row"><code>client.stop()</code></th><td data-label="Meaning">Stops the owned SDK runtime, cleans up connections, and returns an error array</td><td data-label="Responsibility">Check returned errors. Do not use it to stop the Native Driver Host</td></tr>
+              <tr><th scope="row"><code>resumeSession(id, config)</code></th><td data-label="Meaning">Reconnects to an existing SDK session</td><td data-label="Responsibility">Reregister tools, handlers, and restrictions. Do not resume past Coach conversation into the Compiler</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="reading-note"><code>sendAndWait</code>'s default 60-second timer starts after send returns; it is neither a whole-request deadline nor automatic cancellation. The Host must manage the overall deadline, cancellation, and cleanup state separately. SDK <code>hooks.onSessionEnd</code> also does not replace product pairing.end or deliberation-turn closure. <a href="#source-10">[10]</a></p>
+        <h3>Proactive Coaching Flow</h3>
+        <p>The extension decides when to request evaluation; the Coach decides whether a question is needed and what it should ask. Do not replace that judgment with rules that attach a fixed sentence whenever “cache” appears.</p>
+        <div class="flow" aria-label="Flow from observations to Coach intervention">
+          <span class="flow-item">New request, result, or condition</span><span class="flow-arrow" aria-hidden="true">→</span>
+          <span class="flow-item">Context building and deduplication</span><span class="flow-arrow" aria-hidden="true">→</span>
+          <span class="flow-item">Coach evaluation</span><span class="flow-arrow" aria-hidden="true">→</span>
+          <span class="flow-item">Question, explanation, or no intervention</span>
+        </div>
+        <ul class="checklist">
+          <li>Batch events arriving close together; run only one automatic check at a time per Coach session.</li>
+          <li>Prioritize direct user questions over automatic checks.</li>
+          <li>Do not repeat answered or deferred questions unless their evidence changes.</li>
+          <li>Distinguish a failed automatic evaluation from a judgment that no intervention is needed.</li>
+          <li>Do not impose a uniform explanation-length limit. A short question may lead to a longer explanation and follow-up conversation.</li>
+        </ul>
+        <details class="code-panel" open>
+          <summary>JavaScript · late Coach response guard</summary>
+          <pre><code class="language-javascript" data-validate="reply-guard">function decideReply(session, lease, reply, audit) {
+  if (reply.snapshotId !== lease.snapshotId) {
+    throw new Error("REPLY_SNAPSHOT_MISMATCH");
+  }
+  const current =
+    session.status === "active" &amp;&amp;
+    session.pairingId === lease.pairingId &amp;&amp;
+    session.epoch === lease.epoch &amp;&amp;
+    session.revision === lease.revision;
+
+  if (!current) {
+    audit({ type: "coach.reply.discarded", reason: "superseded" });
+    return { kind: "discarded", reason: "superseded" };
+  }
+  return {
+    kind: "publish",
+    pairingId: lease.pairingId,
+    epoch: lease.epoch,
+    revision: lease.revision,
+    text: reply.text
+  };
+}</code></pre>
+          <p class="code-note">The <code>lease</code> captures <code>{ pairingId, epoch, revision, snapshotId }</code> at request start. snapshotId identifies the base conversation context; additional file evidence read through the SDK during this request is attached separately to the Journal. Incrementing input revision for the request's own tool results would discard every read-based response, so distinguish these changes. Update revision for user input, new Driver results, and known external-context changes. Make the decision and commit in the same serialized section.</p>
+        </details>
+        <div class="table-wrap">
+          <table>
+            <caption>Scheduler policy · delays, cooldowns, and call budgets are tunable settings</caption>
+            <thead><tr><th class="key" scope="col">Situation</th><th scope="col">Execution rule</th><th scope="col">State handling</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Direct question</th><td data-label="Rule">Prioritize over automatic evaluation. One request at a time in the same SDK session</td><td data-label="State">Cancel and settle the automatic request before starting. Do not mix with an unsettled request</td></tr>
+              <tr><th scope="row">Consecutive Driver log changes</th><td data-label="Rule">Batch and deduplicate complete new records → one evaluation</td><td data-label="State">Discard earlier replies with an outdated input revision. Do not retrigger from the Coach's own log or read results</td></tr>
+              <tr><th scope="row">No intervention needed</th><td data-label="Rule">Treat as a valid model judgment</td><td data-label="State">Do not turn errors or timeouts into “nothing to say”</td></tr>
+              <tr><th scope="row">pause / end / rebinding</th><td data-label="Rule">Increment epoch, invalidate queued Jobs, and cancel owned Coach requests</td><td data-label="State">Block late replies. Do not cancel Driver work</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="reading-note">SDK tools read code as it exists at tool-call time. The hackathon MVP does not guarantee an atomic snapshot of the entire workspace. Record actual read results, times, and available versions; reconsider against new context when later changes become known. Only the exit report is restricted to frozen input.</p>
+        <div class="note">
+          <strong>The main conversation is problem definition → design reasoning → delegation design.</strong>
+          <p>Code and errors can provide evidence during work, but attaching a review to every diff is not the point. Nor must every small request repeat a mandatory three-stage questioning sequence.</p>
+        </div>
+      </section>
+
+      <section class="chapter" id="experience" aria-labelledby="experience-title">
+        <p class="section-number">07 / LIFECYCLE &amp; SEQUENCE</p>
+        <h2 id="experience-title">Pairing States and Execution Sequences</h2>
+        <p class="section-intro">Manage deliberation-loop turns separately from the full pairing lifecycle. Message names below are internal operation names. The human sends Driver requests directly in the existing UI; new requests and results are linked from the selected log. The Coach reads code with built-in SDK tools.</p>
+        <figure>
+          <div class="diagram-wrap" tabindex="0" role="region" aria-label="Coach-first conversation and joint review of Driver results">
+            <svg class="diagram" viewBox="0 0 1280 730" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="seq-title seq-desc">
+              <title id="seq-title">Coach-first deliberation and Driver work turns</title>
+              <desc id="seq-desc">The Controller stores human input in the Journal and invokes the Coach. The Coach reads needed code through SDK tools. When delegating to the Driver, the user binds a local log and instructs the Driver directly in its existing UI. File-change detection and incremental processing link new instructions and results and request joint review. The human's next work choice begins another turn.</desc>
+              <defs><marker id="seq-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#697b94"/></marker></defs>
+              <rect class="box plain" x="25" y="20" width="160" height="48" rx="5"/><text class="label" x="105" y="50">Human / UI</text>
+              <rect class="box coach" x="255" y="20" width="220" height="48" rx="5"/><text class="label" x="365" y="50">Controller / Log</text>
+              <rect class="box coach" x="535" y="20" width="180" height="48" rx="5"/><text class="label" x="625" y="50">Coach Runtime</text>
+              <rect class="box" x="805" y="20" width="190" height="48" rx="5"/><text class="label" x="900" y="50">Driver / Session Log</text>
+              <rect class="box report" x="1070" y="20" width="180" height="48" rx="5"/><text class="label" x="1160" y="50">Journal / Snapshot</text>
+              <path class="life" d="M105 68 V705 M365 68 V705 M625 68 V705 M900 68 V705 M1160 68 V705"/>
+              <g aria-hidden="true">
+                <path class="edge" d="M105 110 H365" marker-end="url(#seq-arrow)"/>
+                <path class="edge" d="M365 150 H1160" marker-end="url(#seq-arrow)"/>
+                <path class="edge" d="M365 190 H625" marker-end="url(#seq-arrow)"/>
+                <path class="edge" d="M625 230 H365" marker-end="url(#seq-arrow)"/>
+                <path class="edge" d="M105 305 H365" marker-end="url(#seq-arrow)"/>
+                <path class="edge" d="M365 345 H900" marker-end="url(#seq-arrow)"/>
+                <path class="edge" d="M105 385 H900" marker-end="url(#seq-arrow)"/>
+                <path class="edge" d="M900 425 H365" marker-end="url(#seq-arrow)"/>
+                <path class="edge" d="M365 465 H1160" marker-end="url(#seq-arrow)"/>
+                <path class="edge" d="M900 505 H365" marker-end="url(#seq-arrow)"/>
+                <path class="edge" d="M365 545 H1160" marker-end="url(#seq-arrow)"/>
+                <path class="edge" d="M365 585 H625" marker-end="url(#seq-arrow)"/>
+                <path class="edge" d="M625 625 H365" marker-end="url(#seq-arrow)"/>
+                <path class="edge" d="M105 675 H365" marker-end="url(#seq-arrow)"/>
+              </g>
+              <text class="message" x="235" y="99">start + shared context</text>
+              <text class="message" x="762" y="139">Commit human input → snapshot S1</text>
+              <text class="message" x="495" y="179">run(lease, S1)</text>
+              <text class="message" x="495" y="219">Reply → Lease check → UI</text>
+              <rect class="band" x="20" y="252" width="1230" height="26" rx="4"/><text class="caption" x="635" y="270">The human's instruction send closes one deliberation-loop turn</text>
+              <text class="message" x="235" y="294">Select Driver log</text>
+              <text class="message" x="632" y="334">Verify log baseline; start change detection</text>
+              <text class="message" x="502" y="374">Human sends instruction directly in the existing Driver UI</text>
+              <text class="message" x="632" y="414">File: new request / source and turn linkage</text>
+              <text class="message" x="762" y="454">iteration N → driver_pending</text>
+              <text class="message" x="632" y="494">Read logged responses and tool results</text>
+              <text class="message" x="762" y="534">Evidence commit → snapshot S2</text>
+              <text class="message" x="495" y="574">review(lease, S2)</text>
+              <text class="message" x="495" y="614">Review question / explanation → UI</text>
+              <text class="message" x="235" y="664">Next work → iteration N+1</text>
+              <text class="detail" x="635" y="718">Coach and human reference the same S2 evidence · Observing a result never automatically sends the next instruction</text>
+            </svg>
+          </div>
+          <figcaption>The Driver / Session Log lane groups existing execution with its stored records. Joint review references the same Driver evidence; additional Coach code reads and interpretations are recorded as separate sources. S1 and S2 are base conversation context, not atomic copies of the entire workspace.</figcaption>
+        </figure>
+        <h3>Pairing Lifecycle and Turn State</h3>
+        <figure>
+          <div class="diagram-wrap" tabindex="0" role="region" aria-label="Pairing transitions between active, paused, closing, closed, and close_failed">
+            <svg class="diagram" viewBox="0 0 1180 375" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="state-title state-desc">
+              <title id="state-title">Pairing lifecycle states</title>
+              <desc id="state-desc">Pause and resume transition between active and paused. Ending from either enters closing. Successful cleanup enters closed; failed cleanup displays close_failed and can be retried. Driver work and report Job states are separate.</desc>
+              <defs><marker id="state-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#697b94"/></marker></defs>
+              <g aria-hidden="true">
+                <path class="edge" d="M270 115 H350" marker-start="url(#state-arrow)" marker-end="url(#state-arrow)"/>
+                <path class="edge" d="M570 115 H650" marker-end="url(#state-arrow)"/>
+                <path class="edge" d="M870 115 H970" marker-end="url(#state-arrow)"/>
+                <path class="edge" d="M160 150 V210 H760 V150" marker-end="url(#state-arrow)"/>
+                <path class="edge" d="M870 135 H915 V305 H870" marker-end="url(#state-arrow)"/>
+                <path class="edge" d="M760 270 V210"/>
+                <circle cx="760" cy="210" r="3" fill="#697b94"/>
+              </g>
+              <rect class="box coach" x="50" y="80" width="220" height="70" rx="7"/><text class="label" x="160" y="110">active</text><text class="detail" x="160" y="135">Unbound Driver allowed</text>
+              <rect class="box plain" x="350" y="80" width="220" height="70" rx="7"/><text class="label" x="460" y="121">paused</text>
+              <rect class="box report" x="650" y="80" width="220" height="70" rx="7"/><text class="label" x="760" y="110">closing</text><text class="detail" x="760" y="135">Freeze cutoff; block new input</text>
+              <rect class="box plain" x="970" y="80" width="180" height="70" rx="7"/><text class="label" x="1060" y="121">closed</text>
+              <rect class="box report" x="650" y="270" width="220" height="70" rx="7"/><text class="label" x="760" y="311">close_failed</text>
+              <text class="message" x="310" y="62">pause / resume</text><text class="message" x="608" y="101">end</text>
+              <text class="message" x="920" y="100">Cleaned up</text><text class="message" x="450" y="199">end</text>
+              <text class="message" x="958" y="235">Cleanup failed</text><text class="message" x="811" y="249">Retry</text>
+              <text class="detail" x="320" y="321">active stage: discussing → driver_pending → reviewing</text>
+              <text class="detail" x="320" y="345">Increment iteration when the human starts the next discussion after review</text>
+            </svg>
+          </div>
+        </figure>
+        <div class="table-wrap">
+          <table>
+            <caption>Internal events handled by the Controller</caption>
+            <thead><tr><th class="key" scope="col">Event</th><th scope="col">State and data changes</th><th scope="col">Caution</th></tr></thead>
+            <tbody>
+              <tr><th scope="row"><code>pairing.start</code></th><td data-label="Change">New pairingId, active/discussing, driver=null, iteration=1</td><td data-label="Caution">Do not reuse an SDK/Driver sessionId as pairingId</td></tr>
+              <tr><th scope="row"><code>driver.bind</code></th><td data-label="Change">Verify selected log and SDK sessionId, increment generation/epoch, establish initial complete-line baseline</td><td data-label="Caution">Validate the path; do not bind the Coach's own log or another session</td></tr>
+              <tr><th scope="row"><code>directive.confirmed</code></th><td data-label="Change">Link an actual new Native request to the turn. discussing → driver_pending</td><td data-label="Caution">Exclude drafts, historical messages, and Coach suggestions. Leave unclear authorship/turn linkage unclassified until user confirmation</td></tr>
+              <tr><th scope="row"><code>driver.result</code></th><td data-label="Change">Commit evidence from the same binding; create a joint-review snapshot</td><td data-label="Caution">Result existence means neither success nor user understanding</td></tr>
+              <tr><th scope="row"><code>iteration.begin</code></th><td data-label="Change">When the human chooses next work: reviewing → discussing, iteration+1</td><td data-label="Caution">Do not increment on every message or let the model independently finalize a new goal</td></tr>
+              <tr><th scope="row"><code>pairing.pause</code></th><td data-label="Change">Increment epoch; invalidate queued Jobs. Initial policy proposal: stop both log watching and automatic coaching</td><td data-label="Caution">Recheck file, session, and cursor on resume. Unrecovered segments mean coverage=partial</td></tr>
+              <tr><th scope="row"><code>pairing.end</code></th><td data-label="Change">closing → freeze → log-watcher and Coach cleanup → closed or close_failed</td><td data-label="Caution">Do not wait for Driver completion. Neither file-detection failure nor SDK idle means end</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <details class="code-panel" open>
+          <summary>JavaScript · exit ordering (internal ports)</summary>
+          <pre><code class="language-javascript" data-validate="close-pairing">async function closePairing(pairingId, services) {
+  const frozen = await services.controller.freezeForClose(pairingId);
+  // Under the same lock: closing, epoch increment, and finalized cutoff/snapshot.
+  services.scheduler.stop(pairingId);
+
+  const operations = ["logWatch.stop", "coach.closeOwnedRuntime"];
+  const cleanup = await Promise.allSettled([
+    Promise.resolve().then(() => services.logWatch.stop(pairingId)),
+    Promise.resolve().then(() => services.coach.closeOwnedRuntime(pairingId))
+  ]);
+  const failures = cleanup.flatMap((result, index) =>
+    result.status === "rejected"
+      ? [{ operation: operations[index], error: result.reason }]
+      : []
+  );
+
+  await services.controller.finishClose(
+    pairingId, frozen.closeToken, failures
+  );
+  const reportJob = await services.reports.enqueueOnce({
+    pairingId,
+    snapshotId: frozen.snapshotId,
+    compilerVersion: "knowledge-v1"
+  });
+  return { snapshotId: frozen.snapshotId, reportJob };
+}</code></pre>
+          <p class="code-note"><code>freezeForClose</code> is an internal port that blocks input and finalizes epoch, Journal cutoff, and immutable report input. On failure, show close_failed and retry with the same cutoff. <code>logWatch.stop</code> removes only our watcher on the selected file. <code>closeOwnedRuntime</code> cleans up only the owned Coach; <code>finishClose</code> records failures. Neither stops Driver execution nor deletes the original log.</p>
+        </details>
+        <p class="note"><strong>Exit boundary:</strong> Driver output and late Coach replies arriving after closing do not enter the closed snapshot. Callbacks check pairingId, epoch, and generation. Updating a report with new material requires a new snapshotId and Job. Report failure does not reopen an already closed pairing.</p>
+        <div class="note warning">
+          <strong>Reading a sent request differs from reading an unsent draft.</strong>
+          <p>Do not intercept unsent drafts in the existing Driver input. Discuss with the Coach before sending; use logs to inspect stored requests and results after sending to the Driver. Information not yet visible because of log format or write delay remains unverified.</p>
+        </div>
+      </section>
+
+      <section class="chapter" id="knowledge" aria-labelledby="knowledge-title">
+        <p class="section-number">08 / KNOWLEDGE COMPILATION</p>
+        <h2 id="knowledge-title">Knowledge Compilation and HTML Artifacts</h2>
+        <p class="section-intro">A separate Job transforms closed-pairing records into a learning report. Input is one frozen EvidenceSnapshot; model output is structured data. Do not delegate HTML authoring, file writing, or Driver control to the model.</p>
+        <figure>
+          <div class="diagram-wrap" tabindex="0" role="region" aria-label="Data flow from snapshot through report validation and saving">
+            <svg class="diagram" viewBox="0 0 1240 390" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="compile-title compile-desc">
+              <title id="compile-title">Knowledge Compilation pipeline</title>
+              <desc id="compile-desc">Run a restricted Compiler session against the snapshot frozen at exit. Validate the structured output's schema, provenance, and verification level; render it with a fixed HTML template. Save when the user selects a path. Retry generation or validation failures against the same snapshot; saving failures do not invoke the model again.</desc>
+              <defs><marker id="compile-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#697b94"/></marker></defs>
+              <g aria-hidden="true">
+                <path class="edge" d="M270 95 H340" marker-end="url(#compile-arrow)"/>
+                <path class="edge" d="M580 95 H650" marker-end="url(#compile-arrow)"/>
+                <path class="edge" d="M890 95 H960" marker-end="url(#compile-arrow)"/>
+                <path class="edge" d="M1080 140 V245" marker-end="url(#compile-arrow)"/>
+                <path class="edge" d="M770 140 V195 H460 V140" marker-end="url(#compile-arrow)"/>
+              </g>
+              <rect class="box report" x="30" y="50" width="240" height="90" rx="7"/><text class="label" x="150" y="84">FrozenSnapshot</text><text class="detail" x="150" y="110">snapshotId / cutoff / hash</text>
+              <rect class="box coach" x="340" y="50" width="240" height="90" rx="7"/><text class="label" x="460" y="84">Compiler</text><text class="detail" x="460" y="110">Structured data only</text>
+              <rect class="box report" x="650" y="50" width="240" height="90" rx="7"/><text class="label" x="770" y="84">Validator</text><text class="detail" x="770" y="110">Schema / source ID / verification level</text>
+              <rect class="box report" x="960" y="50" width="240" height="90" rx="7"/><text class="label" x="1080" y="84">HTML Renderer</text><text class="detail" x="1080" y="110">Fixed template + escape</text>
+              <rect class="box plain" x="960" y="245" width="240" height="90" rx="7"/><text class="label" x="1080" y="278">Save Dialog / Export</text><text class="detail" x="1080" y="306">User-selected path</text>
+              <text class="message" x="615" y="181">Validation failure → bounded retry with the same input</text>
+              <text class="message" x="1117" y="208">ready</text>
+              <text class="caption" x="405" y="271">LLM input: allowed evidence + decided/open choices + generation policy</text>
+              <text class="detail" x="405" y="302">No autonomous extra-evidence lookup or external file modification</text>
+              <text class="detail" x="620" y="373">Closed snapshot unchanged · Saving failure retries export · Report failure does not block Driver work</text>
+            </svg>
+          </div>
+        </figure>
+        <div class="schema-grid">
+          <div><h3>Frozen Input</h3><p>Coverage is <code>journalSeq &lt;= cutoff</code>. Exclude results arriving after exit; record in-progress tools and observation gaps in coverage. Never change content mapped to a snapshotId.</p></div>
+          <div><h3>Execution Isolation</h3><p>The initial proposal is one independent SDK session per report Job. Do not continue the existing Coach conversation; permit only the frozen snapshot. Duplicate requests for the same snapshot and Compiler version resolve to the same Job.</p></div>
+        </div>
+        <details class="code-panel" open>
+          <summary>SDK · structured-result submission tool</summary>
+          <pre><code class="language-javascript" data-api="copilot-sdk-output">import { defineTool } from "@github/copilot-sdk";
+
+function createReportOutputTool(reportJsonSchema, snapshot, job) {
+  return defineTool("emit_session_report", {
+    description: "Submit the report for this frozen snapshot.",
+    parameters: reportJsonSchema,
+    defer: "never",
+    skipPermission: true,
+    isTerminal: true,
+    handler: (args, invocation) => {
+      invocation.signal?.throwIfAborted();
+      const report = validateKnowledgeReport(args, snapshot);
+      job.acceptReportOnce(report);
+      return "accepted";
+    }
+  });
+}</code></pre>
+          <p class="code-note"><code>reportJsonSchema</code> and <code>job.acceptReportOnce</code> are internal implementations. The former matches the DTO below; production code should maintain one definition shared with runtime validation. The latter checks Job state and snapshotId and rejects duplicates and post-cancellation submissions. This tool submits validated data to Host memory; it does not write files.</p>
+        </details>
+        <details class="code-panel">
+          <summary>SDK · Compiler-only tool allowlist</summary>
+          <pre><code class="language-javascript" data-api="copilot-sdk-compiler">function createCompilerSession(
+            client, isolationConfig, compilerPolicy, readFrozenSnapshot, emitReport,
+            isolatedDirectory
+          ) {
+            if (typeof isolatedDirectory !== "string" || isolatedDirectory.length === 0) {
+              throw new Error("COMPILER_ISOLATED_DIRECTORY_REQUIRED");
+            }
+            return client.createSession({
+              ...isolationConfig,
+              workingDirectory: isolatedDirectory,
+              configDirectory: isolatedDirectory,
+              systemMessage: { mode: "append", content: compilerPolicy },
+    tools: [readFrozenSnapshot, emitReport],
+    availableTools: [
+      "custom:read_context_snapshot",
+      "custom:emit_session_report"
+    ],
+    excludedTools: ["builtin:*", "mcp:*"],
+    onPermissionRequest: () => ({ kind: "reject" })
+  });
+}</code></pre>
+          <p class="code-note"><code>isolationConfig</code> reuses the ambient-configuration disabling and memory/storage restrictions in 06. Explicitly override the working directory and permissions above so the Compiler inherits neither the project directory nor the Coach's read access. The read tool captures only one exit snapshot; it does not reuse live files or a past Coach SDK session.</p>
+        </details>
+        <p class="note"><strong>Model text is not the success condition.</strong> No <code>response_format</code>-style session option was found in the pinned SDK source, so none is used here. A successful terminal tool may end the turn without an assistant message. After session completion, check for an accepted report object; fail with <code>NO_REPORT_SUBMITTED</code> if none exists. <a href="#source-09">[9]</a> <a href="#source-10">[10]</a></p>
+        <p class="reading-note">Frozen data is not trusted instruction. Treat instructions embedded in Driver responses, code, and logs only as evidence; do not execute them. Limit Compiler <code>skipPermission</code> exceptions to snapshot reads and Host-memory submission.</p>
+        <details class="code-panel" open>
+          <summary>TypeScript · report data and Job contracts</summary>
+          <pre><code class="language-typescript">type KnowledgeBasis =
+  | "discussed"
+  | "human_explained"
+  | "execution_observed"
+  | "unverified";
+
+interface KnowledgeItem {
+  title: string;
+  before: string;
+  after: string;
+  why: string;
+  appliesWhen: string;
+  limits: readonly string[];
+  basis: KnowledgeBasis;
+  evidenceIds: readonly string[];
+}
+
+interface KnowledgeReport {
+  schemaVersion: 1;
+  pairingId: string;
+  snapshotId: string;
+  title: string;
+  items: readonly KnowledgeItem[];
+  openQuestions: readonly string[];
+}
+
+interface ReportJob {
+  jobId: string;
+  snapshotId: string;
+  compilerVersion: string;
+  attempt: number;
+  state:
+    | "queued" | "generating" | "validating"
+    | "ready" | "failed" | "cancelled" | "no_material";
+  error?: {
+    stage: "generate" | "validate" | "render";
+    code: string;
+  };
+}</code></pre>
+          <p class="code-note">All are internal contracts. Export has separate state. A validated ReportJob remains ready after a save error; do not invoke the model again.</p>
+        </details>
+        <div class="table-wrap">
+          <table>
+            <caption>Verification levels · not learning certification</caption>
+            <thead><tr><th class="key" scope="col">basis</th><th scope="col">Required evidence</th><th scope="col">What it does not mean</th></tr></thead>
+            <tbody>
+              <tr><th scope="row"><code>discussed</code></th><td data-label="Evidence">The human–Coach conversation addressed the topic</td><td data-label="Limit">An explanation does not establish that the user learned it</td></tr>
+              <tr><th scope="row"><code>human_explained</code></th><td data-label="Evidence">A record of the user expressing their own reasons and conditions</td><td data-label="Limit">An agreement button or “yes” alone does not establish independent understanding</td></tr>
+              <tr><th scope="row"><code>execution_observed</code></th><td data-label="Evidence">A completed tool execution result was actually observed</td><td data-label="Limit">Observing a test run differs from achieving the entire goal</td></tr>
+              <tr><th scope="row"><code>unverified</code></th><td data-label="Evidence">An explanation or report exists, but verification remains</td><td data-label="Limit">A Driver success claim alone does not raise it to verified</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <details class="code-panel">
+          <summary>JSON · compilation-result example</summary>
+          <pre><code class="language-json">{
+  "schemaVersion": 1,
+  "pairingId": "pair-001",
+  "snapshotId": "snapshot-042",
+  "title": "Cache keys and freshness decisions",
+  "items": [{
+    "title": "Include inputs that change results in the cache key",
+    "before": "Planned to use only the product ID as the key",
+    "after": "Use both product ID and request language",
+    "why": "Description-processing results differ by request language",
+    "appliesWhen": "Reusing processed results for combinations of inputs",
+    "limits": ["Check separately for authentication-dependent or user-specific results"],
+    "basis": "human_explained",
+    "evidenceIds": ["ev-08", "ev-42"]
+  }],
+  "openQuestions": ["Cache entry limit and eviction policy"]
+}</code></pre>
+          <p class="code-note">In this fictional snapshot, ev-08 refers to a human statement and ev-42 to a tool result. Actual Jobs reject citations outside the allowed Evidence ID set.</p>
+        </details>
+        <details class="code-panel" open>
+          <summary>JavaScript · schema, provenance, and verification-level validation</summary>
+          <pre><code class="language-javascript" data-validate="report-validator">function requireObject(value, keys) {
+  if (value === null || typeof value !== "object" ||
+      Array.isArray(value) ||
+      Object.keys(value).length !== keys.length ||
+      !keys.every(key => Object.hasOwn(value, key))) {
+    throw new Error("REPORT_SCHEMA_INVALID");
+  }
+}
+
+function requireText(value, max = 2000) {
+  if (typeof value !== "string" ||
+      value.trim().length === 0 || value.length > max) {
+    throw new Error("REPORT_TEXT_INVALID");
+  }
+}
+
+function requireTextList(value, max) {
+  if (!Array.isArray(value) || value.length > max) {
+    throw new Error("REPORT_LIST_INVALID");
+  }
+  value.forEach(text => requireText(text));
+}
+
+function validateKnowledgeReport(value, snapshot) {
+  requireObject(value, [
+    "schemaVersion", "pairingId", "snapshotId",
+    "title", "items", "openQuestions"
+  ]);
+  if (value.schemaVersion !== 1 ||
+      value.pairingId !== snapshot.pairingId ||
+      value.snapshotId !== snapshot.snapshotId) {
+    throw new Error("REPORT_INPUT_MISMATCH");
+  }
+  requireText(value.title, 200);
+  requireTextList(value.openQuestions, 24);
+  if (!Array.isArray(value.items) ||
+      value.items.length === 0 || value.items.length > 24) {
+    throw new Error("REPORT_ITEMS_INVALID");
+  }
+  const evidence = new Map(snapshot.evidence.map(item => [item.id, item]));
+  const bases = new Set([
+    "discussed", "human_explained", "execution_observed", "unverified"
+  ]);
+
+  for (const item of value.items) {
+    requireObject(item, [
+      "title", "before", "after", "why", "appliesWhen",
+      "limits", "basis", "evidenceIds"
+    ]);
+    for (const key of ["title", "before", "after", "why", "appliesWhen"]) {
+      requireText(item[key]);
+    }
+    requireTextList(item.limits, 12);
+    requireTextList(item.evidenceIds, 24);
+    if (!bases.has(item.basis) || item.evidenceIds.length === 0 ||
+        new Set(item.evidenceIds).size !== item.evidenceIds.length) {
+      throw new Error("REPORT_BASIS_INVALID");
+    }
+    const refs = item.evidenceIds.map(id => {
+      const ref = evidence.get(id);
+      if (!ref) throw new Error("UNKNOWN_EVIDENCE_ID");
+      return ref;
+    });
+    const completeHuman = refs.some(ref =>
+      ref.source === "human" &amp;&amp; ref.completeness === "complete");
+    const completeTool = refs.some(ref =>
+      ref.source === "tool" &amp;&amp; ref.completeness === "complete");
+    const conversation = refs.some(ref =>
+      ref.source === "human" || ref.source === "coach");
+    if ((item.basis === "human_explained" &amp;&amp; !completeHuman) ||
+        (item.basis === "execution_observed" &amp;&amp; !completeTool) ||
+        (item.basis === "discussed" &amp;&amp; !conversation)) {
+      throw new Error("EVIDENCE_BASIS_MISMATCH");
+    }
+  }
+  return structuredClone(value);
+}</code></pre>
+          <p class="code-note">Limits are initial design examples. Also enforce a response-byte limit before accepting JSON. The input snapshot must be an immutable object whose types, unique Evidence IDs, and hash have been validated by the Store. This check verifies structure, IDs, and source kinds; it proves neither that a claim follows logically from evidence nor that the user learned it. Mark validation errors as Job failures.</p>
+        </details>
+        <details class="code-panel">
+          <summary>JavaScript · fixed-template HTML rendering</summary>
+          <pre><code class="language-javascript" data-validate="report-renderer">function escapeHtml(value) {
+  const entities = {
+    "&amp;": "&amp;amp;", "&lt;": "&amp;lt;", "&gt;": "&amp;gt;",
+    '"': "&amp;quot;", "'": "&amp;#39;"
+  };
+  return value.replace(/[&amp;&lt;&gt;"']/g, char => entities[char]);
+}
+
+function renderKnowledgeReport(raw, snapshot) {
+  const report = validateKnowledgeReport(raw, snapshot);
+  const usedIds = [...new Set(report.items.flatMap(item => item.evidenceIds))];
+  const numbers = new Map(usedIds.map((id, index) => [id, index + 1]));
+  const evidence = new Map(snapshot.evidence.map(item => [item.id, item]));
+  const labels = {
+    discussed: "Discussed",
+    human_explained: "Explained by the human",
+    execution_observed: "Execution evidence observed",
+    unverified: "Reported / explained, not verified"
+  };
+  const list = values => values.map(text =>
+    `&lt;li&gt;${escapeHtml(text)}&lt;/li&gt;`).join("");
+
+  const sections = report.items.map(item => {
+    const refs = item.evidenceIds.map(id =>
+      `&lt;a href="#e-${numbers.get(id)}"&gt;[${numbers.get(id)}]&lt;/a&gt;`).join(" ");
+    return `&lt;section&gt;&lt;h2&gt;${escapeHtml(item.title)}&lt;/h2&gt;
+      &lt;p&gt;${labels[item.basis]} · ${refs}&lt;/p&gt;
+      &lt;p&gt;Before: ${escapeHtml(item.before)}&lt;/p&gt;
+      &lt;p&gt;After: ${escapeHtml(item.after)}&lt;/p&gt;
+      &lt;p&gt;Reason: ${escapeHtml(item.why)}&lt;/p&gt;
+      &lt;p&gt;Applies when: ${escapeHtml(item.appliesWhen)}&lt;/p&gt;
+      &lt;ul&gt;${list(item.limits)}&lt;/ul&gt;&lt;/section&gt;`;
+  }).join("");
+
+  const sources = usedIds.map(id => {
+    const ref = evidence.get(id);
+    return `&lt;li id="e-${numbers.get(id)}"&gt;
+      ${escapeHtml(ref.sourceRef)} · ${escapeHtml(ref.sourceVersion)}
+      &lt;pre&gt;${escapeHtml(ref.text)}&lt;/pre&gt;&lt;/li&gt;`;
+  }).join("");
+  return `&lt;!doctype html&gt;&lt;html lang="en"&gt;&lt;head&gt;
+    &lt;meta charset="utf-8"&gt;
+    &lt;meta name="viewport" content="width=device-width,initial-scale=1"&gt;
+    &lt;meta http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"&gt;
+    &lt;title&gt;${escapeHtml(report.title)}&lt;/title&gt;
+    &lt;style&gt;body{max-width:900px;margin:auto;padding:24px;font:16px/1.8 sans-serif}
+    pre{white-space:pre-wrap;overflow-wrap:anywhere}
+    section{border-top:1px solid #ddd;margin-top:24px}&lt;/style&gt;
+    &lt;/head&gt;&lt;body&gt;&lt;h1&gt;${escapeHtml(report.title)}&lt;/h1&gt;
+    &lt;p&gt;Snapshot: ${escapeHtml(snapshot.snapshotId)} / cutoff: ${snapshot.cutoff}&lt;/p&gt;
+    &lt;p&gt;Driver observation coverage: ${escapeHtml(snapshot.coverage.driver)}&lt;/p&gt;
+    &lt;ul&gt;${list(snapshot.coverage.gaps)}&lt;/ul&gt;
+    ${sections}&lt;h2&gt;Open Questions&lt;/h2&gt;&lt;ul&gt;${list(report.openQuestions)}&lt;/ul&gt;
+    &lt;h2&gt;Evidence&lt;/h2&gt;&lt;ol&gt;${sources}&lt;/ol&gt;&lt;/body&gt;&lt;/html&gt;`;
+}</code></pre>
+          <p class="code-note">A minimal template. Evidence links are internal anchors derived only from validated Evidence IDs. Do not insert model-provided HTML, URLs, or command links. Recheck the selected sharing and storage policy before exporting raw quotations.</p>
+        </details>
+        <div class="table-wrap">
+          <table>
+            <caption>Failure, retry, and export contracts</caption>
+            <thead><tr><th class="key" scope="col">Situation</th><th scope="col">State and action</th><th scope="col">Retry scope</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">No material to compile</th><td data-label="Action">Show no_material and the reason; skip model invocation</td><td data-label="Retry">New material requires generation from a new snapshot</td></tr>
+              <tr><th scope="row">Generation / validation failure</th><td data-label="Action">failed(stage, code). Do not present a draft as a valid report</td><td data-label="Retry">Bounded attempts against the same snapshot. Associate prompt, schema, and model settings with compilerVersion</td></tr>
+              <tr><th scope="row">User cancellation</th><td data-label="Action">Cancel only that Compiler request; show cancelled</td><td data-label="Retry">Explicit retry. No effect on the Native Driver</td></tr>
+              <tr><th scope="row">HTML ready</th><td data-label="Action">ready. Offer preview and save</td><td data-label="Retry">Keep HTML after a cancelled or failed save; retry export only</td></tr>
+              <tr><th scope="row">Save-path selection</th><td data-label="Action">Use the extension's save dialog; confirm overwrite and write only to the selected path</td><td data-label="Retry">Show permission and path errors. Do not save to a model-selected path</td></tr>
+              <tr><th scope="row">Later Driver result</th><td data-label="Action">Keep the existing snapshot and report; do not silently merge late material</td><td data-label="Retry">A user-requested update gets a new snapshotId and generation history</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="boundaries" aria-labelledby="boundaries-title">
+        <p class="section-number">09 / TRUST &amp; FAILURE</p>
+        <h2 id="boundaries-title">Permissions, Errors, and Storage Boundaries</h2>
+        <p class="section-intro">Being able to read a file does not verify appropriate read-only permissions. Check the Coach tool allowlist, permitted paths, and which log content reaches the model separately. Not using AHP does not remove these boundaries.</p>
+        <div class="table-wrap">
+          <table>
+            <caption>Boundaries for extension integration and the Coach</caption>
+            <thead><tr><th class="key" scope="col">Target</th><th scope="col">Allowed</th><th scope="col">Blocked / caution</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Log helpers</th><td data-label="Allowed">Selected-file metadata, needed increments, and change detection</td><td data-label="Blocked / caution">No discovery of other sessions, source modification/deletion, or Driver send/cancel/approval</td></tr>
+              <tr><th scope="row">Coach tools</th><td data-label="Allowed">Verified built-in SDK read/search and context helper reads</td><td data-label="Blocked / caution">Exclude edit, shell, delegation, and Driver-control tools. General read permission does not distinguish sensitive fields within a log</td></tr>
+              <tr><th scope="row">Compiler tools</th><td data-label="Allowed">Exit-snapshot reads and validated report-data submission</td><td data-label="Blocked / caution">Exclude all built-in tools. No new exploration of the live workspace or Driver log</td></tr>
+              <tr><th scope="row">UI and content</th><td data-label="Allowed">Questions, explanations, provenance, and connection status</td><td data-label="Blocked / caution">Do not execute HTML or command links in model Markdown. Arbitrary Webview messages do not constitute approval</td></tr>
+              <tr><th scope="row">Shared materials</th><td data-label="Allowed">Selected Driver conversation and relevant files</td><td data-label="Blocked / caution">Do not automatically attach other sessions, secret files, tokens, or the entire environment</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="reading-note">A working-directory setting is not an OS sandbox. Separately allow only the selected path for session records outside the workspace; test symlinks, path traversal, and actual SDK permission callback behavior. Exclude nonshared instructions and authentication information from model input, ordinary logs, and reports.</p>
+        <h3>Record and Context Provenance</h3>
+        <ul>
+          <li>Record human requests, Driver responses, external file changes, and Coach suggestions as distinct sources.</li>
+          <li>Record actual file content, ranges, read times, and available versions or hashes. Do not claim MVP SDK file reads include unsaved editor buffers.</li>
+          <li>Do not attribute a file change to the Driver when its author is unknown.</li>
+          <li>Do not automatically save Coach suggestions as agreed decisions. Link them to human confirmation.</li>
+        </ul>
+        <h3>Explicit Failure States</h3>
+        <p>Log-read and change-detection failures must not block Driver execution. Disclose the failed source path and missing coverage; do not recover by resending or cancelling Driver requests.</p>
+        <div class="table-wrap">
+          <table>
+            <caption>Representative failures and handling</caption>
+            <thead><tr><th class="key" scope="col">Situation</th><th scope="col">Handling</th><th scope="col">Prohibited response</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Log-read failure / replacement</th><td data-label="Handling">Stop automatic evaluation; show the last read position. Reverify file/session and record gaps</td><td data-label="Prohibited response">Resend Driver requests or silently switch logs</td></tr>
+              <tr><th scope="row">Missing records or results</th><td data-label="Handling">Disclose gaps and discuss only available evidence</td><td data-label="Prohibited response">Present a truncated summary as the full session</td></tr>
+              <tr><th scope="row">Coach error / usage limit</th><td data-label="Handling">Show the error and suspended automatic-intervention state. Driver remains independently usable</td><td data-label="Prohibited response">Hide the error as “nothing to say”</td></tr>
+              <tr><th scope="row">Permission-decision failure</th><td data-label="Handling">Explicitly reject and record diagnostics</td><td data-label="Prohibited response">Assume throwing an exception alone blocks the action</td></tr>
+              <tr><th scope="row">Coach stop / restart</th><td data-label="Handling">Clean up only Coach work and connections. Reregister tools and policy on recovery</td><td data-label="Prohibited response">Stop/delete the Native Driver or reuse prior approvals</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="reading-note">In the inspected SDK, omitting the permission handler may leave requests pending, and a tool Hook exception may not act as an explicit rejection. A <code>sendAndWait()</code> timeout also does not automatically cancel the request. Treat error, cancellation, and completion as distinct states. <sup class="cite"><a href="#source-09" aria-label="Source 9: SDK permissions">[9]</a> <a href="#source-10" aria-label="Source 10: SDK session handling">[10]</a></sup></p>
+        <h3>Code Sharing and Call Costs</h3>
+        <p>Disclose that a separate Coach invocation resends material even when it was already used by the Native Driver. Model calls use external services; automatic checks also consume usage. Batch calls, show usage by role, and provide stop controls, without claiming exact billing or an absolute spending cap from local accounting alone.</p>
+        <p>Do not assume the native Copilot login automatically applies to an independent SDK Coach. Use supported authentication paths; do not extract private tokens. Never send credentials to the Webview or ordinary logs. <sup class="cite"><a href="#source-13" aria-label="Source 13: SDK authentication and usage">[13]</a></sup></p>
+      </section>
+
+      <section class="chapter" id="implementation" aria-labelledby="implementation-title">
+        <p class="section-number">10 / IMPLEMENTATION &amp; TESTS</p>
+        <h2 id="implementation-title">Implementation Order and Validation Gates</h2>
+        <p class="section-intro">The basic file-access PoC is verified in the current CLI/SDK session. Next, verify that a read-only Coach can actually read needed code and records but cannot modify files or execute commands. AHP implementation is not a prerequisite.</p>
+        <h3>Initial Support Scope</h3>
+        <p>Start with <strong>VS Code Desktop, one trusted local workspace, one Driver session in the verified CLI/SDK log format, and a read-only SDK Coach</strong>. The exact SDK tool and permission profile still needs verification. Voice, automatic test authoring, multiple Drivers, and remote environments are out of initial scope.</p>
+        <p>Workspace Trust is separate from consent to send material to a model. Other Native Copilot harnesses, Remote SSH, WSL, and Dev Containers require fresh checks of file locations, accessibility, and formats. Compare AHP if needed then. <sup class="cite"><a href="#source-16" aria-label="Source 16: extensions and remote environments">[16]</a></sup></p>
+        <h3>Extension Modules</h3>
+        <p>Start with a TypeScript extension, WebviewView, Copilot SDK, and small file helpers. These are responsibility boundaries, not instructions to create independent services for each. Do not add an AHP client, dedicated Workspace Reader, or separate cloud server/database to the MVP.</p>
+        <div class="table-wrap">
+          <table>
+            <caption>Modules implemented by the extension</caption>
+            <thead><tr><th class="key" scope="col">Module</th><th scope="col">Responsibility</th><th scope="col">Boundary</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Driver Agent Package</th><td data-label="Responsibility">Contribute role instructions and usage guidance</td><td data-label="Boundary">Do not duplicate Driver UI or execution loops</td></tr>
+              <tr><th scope="row">Local log helpers</th><td data-label="Responsibility">Verify selected path and SDK sessionId, signal changes, and process needed JSONL increments</td><td data-label="Boundary">No general Reader framework or Driver-control API</td></tr>
+              <tr><th scope="row">Context Builder / Journal</th><td data-label="Responsibility">Link used log segments, code reads, conversation, decisions, and observation coverage</td><td data-label="Boundary">Do not copy all raw content. Distinguish own tool results from external-context changes</td></tr>
+              <tr><th scope="row">Coach Scheduler</th><td data-label="Responsibility">Batch events, prioritize direct questions, deduplicate, and budget calls</td><td data-label="Boundary">The Coach decides question content</td></tr>
+              <tr><th scope="row">Coach Runtime / Policy</th><td data-label="Responsibility">Built-in SDK read/search tools, path permissions, persona, stop, and recovery</td><td data-label="Boundary">Exclude modification, shell, and Driver control. Refuse startup before actual profile verification</td></tr>
+              <tr><th scope="row">Coach View</th><td data-label="Responsibility">Conversation, evidence links, connection and automatic-intervention status</td><td data-label="Boundary">SDK and authentication belong in the Host, not Webview</td></tr>
+              <tr><th scope="row">Pairing Controller</th><td data-label="Responsibility">Coach-first start, turn linkage, pause/end, epoch, and cutoff</td><td data-label="Boundary">Serialize per session. Separate from Native session lifecycle</td></tr>
+              <tr><th scope="row">Knowledge Compiler</th><td data-label="Responsibility">Generate and validate structured reports from frozen snapshots; retry Jobs</td><td data-label="Boundary">No new-file or other-conversation exploration; no code modification</td></tr>
+              <tr><th scope="row">Report Renderer / Export</th><td data-label="Responsibility">Fixed template, escaping, preview, and optional save</td><td data-label="Boundary">No recompilation on save failure; no model-selected paths</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="reading-note">The initial SDK review baseline is GitHub release <code>v1.0.13</code>. Pin and test the actual package, runtime, and Extension Host Node compatibility. Verify that SDK platform runtime assets are included in the VSIX; a JavaScript bundle alone may not suffice. <sup class="cite"><a href="#source-08" aria-label="Source 8: SDK release">[8]</a> <a href="#source-12" aria-label="Source 12: runtime distribution">[12]</a></sup></p>
+        <h3>Stage Gates</h3>
+        <div class="table-wrap">
+          <table>
+            <caption>Implementation stages and exit criteria — planned work not yet executed</caption>
+            <thead><tr><th class="key" scope="col">Stage</th><th scope="col">Deliverable</th><th scope="col">Exit criteria</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">0. File-access PoC</th><td data-label="Deliverable">Read current-session requests, responses, tool arguments/results, and detect new output</td><td data-label="Exit criteria"><strong>Verified in the current CLI/SDK environment.</strong> Not verified for other harnesses, large outputs, or restart</td></tr>
+              <tr><th scope="row">1. SDK read profile</th><td data-label="Deliverable">Actual read/search tool names, project path, selected log, permission callback</td><td data-label="Exit criteria">Code and needed records are readable; writes, shell, delegation, and nonshared paths are not allowed</td></tr>
+              <tr><th scope="row">2. Minimal pairing and joint review</th><td data-label="Deliverable">Coach-first entry, log-change trigger, minimal Journal, turns, and Lease</td><td data-label="Exit criteria">Correct new-instruction/result linkage. Own read results do not cause infinite reinvocation</td></tr>
+              <tr><th scope="row">3. Exit and knowledge compilation</th><td data-label="Deliverable">freeze, Compiler, Validator, Renderer, Export</td><td data-label="Exit criteria">Exclude post-cutoff material, reject fabricated provenance, respect sharing scope, escape HTML, separate save errors</td></tr>
+              <tr><th scope="row">4. Reliability and distribution</th><td data-label="Deliverable">Negative permission tests, stop/recovery, call accounting, packaging</td><td data-label="Exit criteria">Policy survives errors and restarts; no side effects on Native Driver work</td></tr>
+              <tr><th scope="row">5. Real-work evaluation</th><td data-label="Deliverable">Observe selective use in real projects</td><td data-label="Exit criteria">Check whether questions helped judgment, the human instructed directly, and report verification levels match actual evidence</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Next SDK Read-Profile Checks</h3>
+        <ul class="checklist">
+          <li>The Coach reads saved project files and searches needed code with built-in SDK tools.</li>
+          <li>It reads only permitted records from the selected Driver, not other sessions, authentication files, or nonshared material.</li>
+          <li>Edit, shell, and delegation tools are not exposed; unexpected permission requests are rejected.</li>
+          <li>Inspect actual tool results for file content, log segments, and large-output reference formats.</li>
+          <li>Separate Driver and Coach logs; own reads and replies do not repeatedly trigger automatic interventions.</li>
+          <li>The Compiler uses stricter settings than the Coach, reads no new files, and consumes only exit input.</li>
+        </ul>
+        <div class="note warning">
+          <strong>Judge file-access sufficiency against actual material.</strong>
+          <p>If required state or results are missing, or format/access limitations prevent meeting requirements, narrow support or compare AHP and Hooks. Do not hide failures or broaden permissions just to pass. Building AHP is not itself the goal.</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <caption>Regression-test matrix · future automation criteria</caption>
+            <thead><tr><th class="key" scope="col">Input / action</th><th scope="col">Expected result</th><th scope="col">Validation layer</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Start without Driver binding</th><td data-label="Expected">active/discussing; Coach can respond; no Driver-port calls</td><td data-label="Layer">Controller unit</td></tr>
+              <tr><th scope="row">Historical user turn / repeated event</th><td data-label="Expected">Treat as baseline/duplicate; turn count unchanged</td><td data-label="Layer">Normalizer + Journal</td></tr>
+              <tr><th scope="row">Confirmed new direct instruction</th><td data-label="Expected">Link the new logged SDK event to the current turn exactly once; driver_pending</td><td data-label="Layer">Log helper → Controller</td></tr>
+              <tr><th scope="row">Joint review after results</th><td data-label="Expected">Human and Coach reference the same evidence snapshotId</td><td data-label="Layer">Integration + UI</td></tr>
+              <tr><th scope="row">pause / end / context replacement while pending</th><td data-label="Expected">Discard and diagnose old-Lease responses; zero Native cancel calls</td><td data-label="Layer">Scheduler + Runtime</td></tr>
+              <tr><th scope="row">Simultaneous end and result event</th><td data-label="Expected">Serialization boundary determines cutoff inclusion; existing snapshot content unchanged</td><td data-label="Layer">Controller + Store</td></tr>
+              <tr><th scope="row">Wrong snapshotId / nonexistent Evidence ID</th><td data-label="Expected">Report validation fails; not exposed as a valid report</td><td data-label="Layer">Validator unit</td></tr>
+              <tr><th scope="row">Execution claim citing only Coach speech</th><td data-label="Expected">EVIDENCE_BASIS_MISMATCH</td><td data-label="Layer">Validator unit</td></tr>
+              <tr><th scope="row">HTML / command links in model or source content</th><td data-label="Expected">Render as text; no execution or external requests</td><td data-label="Layer">Renderer + browser</td></tr>
+              <tr><th scope="row">Save cancelled / permission error</th><td data-label="Expected">Only Export state changes; ready data retained; zero additional model calls</td><td data-label="Layer">Export integration</td></tr>
+              <tr><th scope="row">Missing read profile / wildcard tool name</th><td data-label="Expected">Reject Coach creation. Do not fall back to all built-in tools</td><td data-label="Layer">SDK configuration unit</td></tr>
+              <tr><th scope="row">Coach profile reused for Compiler</th><td data-label="Expected">Compiler explicitly restricts working directory, permissions, and tools</td><td data-label="Layer">Compiler configuration unit</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="alternatives" aria-labelledby="alternatives-title">
+        <p class="section-number">11 / ALTERNATIVES</p>
+        <h2 id="alternatives-title">Future Alternatives and Unverified Items</h2>
+        <p class="section-intro">The requirement is that the Coach can use Driver work context and current code, not AHP itself. Start the hackathon with the measured local-file approach; choose alternatives after identifying missing capabilities and support needs.</p>
+        <div class="table-wrap">
+          <table>
+            <caption>Considered configurations and current assessment</caption>
+            <thead><tr><th class="key" scope="col">Configuration</th><th scope="col">Benefits and constraints</th><th scope="col">Current assessment</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Local log + SDK read/search</th><td data-label="Benefits and constraints">Current CLI/SDK record reading and new-output detection verified. Paths, formats, and permissions depend on environment</td><td data-label="Assessment"><strong>Preferred hackathon MVP.</strong> Verify the actual read-only Coach profile next</td></tr>
+              <tr><th scope="row">Existing Driver + AHP + separate Coach</th><td data-label="Benefits and constraints">Structured Host-state queries, subscriptions, and reconnection contracts. Endpoint, authentication, and compatibility need checking</td><td data-label="Assessment">Revisit if files lack needed state or remote/multi-harness support becomes necessary</td></tr>
+              <tr><th scope="row">Existing Driver + Hook</th><td data-label="Benefits and constraints">Selected submission/tool events can serve as lightweight triggers, with harness-specific differences</td><td data-label="Assessment">Consider as an alternative or complement to file watching after verifying needed events</td></tr>
+              <tr><th scope="row">Separate SDK Driver and Coach</th><td data-label="Benefits and constraints">Easier input/session control, but requires rebuilding Driver UI and execution integration</td><td data-label="Assessment">Not preferred: does not preserve the native UI</td></tr>
+              <tr><th scope="row">Two Custom Agents only</th><td data-label="Benefits and constraints">Simple manual persona conversations; no automatic session observation or intervention</td><td data-label="Assessment">Useful for persona testing, not a replacement for the full product</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>AHP Boundaries</h3>
+        <p>AHP is a Host-state query/subscription protocol, not storage. It can read retained past turns through snapshot/fetchTurns and subscribe to new changes, but does not guarantee permanent retention of every original event. Do not assume serverSeq increases by exactly one for a selected channel; handle reconnection through replay or snapshot. This is future reference, not the current MVP code contract. <a href="#source-06">[6]</a> <a href="#source-18">[18]</a> <a href="#source-19">[19]</a></p>
+        <p>AHP is not the only way to manage read permissions. AHP itself also has execution and approval capabilities, so separate restrictions remain necessary. Connection to the existing Host endpoint and server-enforced read-only permissions are not yet verified. <a href="#source-04">[4]</a> <a href="#source-05">[5]</a> <a href="#source-07">[7]</a></p>
+        <h3>Open Decisions</h3>
+        <ul>
+          <li>Actual built-in SDK read/search tool names, path permissions, and rejection behavior for the Coach</li>
+          <li>Log locations, formats, and result completeness for each supported CLI/SDK and Native Copilot execution mode</li>
+          <li>Selected Driver-log identification UX, large outputs, log rotation, and restart handling</li>
+          <li>Coach/Compiler models, intervention frequency, call budgets, and validation-retry limits</li>
+          <li>Context-retention period, raw-content storage scope, and deletion method</li>
+          <li>Log-sharing scope for model input, sensitive-field filtering, and collection of code evidence actually used</li>
+          <li>Pause-time collection policy, remote support scope, and report quotation, retention, and deletion policies</li>
+        </ul>
+        <p class="reading-note">Test-authoring assistance and remote support are future features. Do not build a dedicated Workspace Reader first for basic read/search, or make the whole MVP depend on successful AHP integration. Observing an existing Driver through files differs from recreating the Driver with an extension-owned SDK.</p>
+      </section>
+
+      <section class="chapter" id="sources" aria-labelledby="sources-title">
+        <p class="section-number">12 / REFERENCES</p>
+        <h2 id="sources-title">Official Sources and References</h2>
+        <p class="section-intro">Links support the explanations. Finding an implementation path in source differs from running it in the current environment. This HTML opens without external scripts, fonts, or images; only following a source link visits an external site.</p>
+        <ol class="sources">
+          <li id="source-01"><a href="https://code.visualstudio.com/docs/agents/run/agent-harnesses">VS Code · Agent harnesses</a><p>Local and Agent Host-based Copilot; the distinction between UI and execution harness.</p></li>
+          <li id="source-02"><a href="https://code.visualstudio.com/api/references/contribution-points">VS Code · Contribution Points</a><p>The contribution point for an extension-packaged Custom Agent.</p></li>
+          <li id="source-03"><a href="https://github.com/microsoft/vscode/blob/645f29cc3176500b4b5762ba887cf2a7f0ffdf2c/src/vs/platform/agentHost/node/copilot/copilotPluginConverters.ts">VS Code source · Copilot Custom Agent conversion</a><p>Forwarding agent configuration to the SDK and handling empty tools arrays. Source baseline: Stable 1.137.0.</p></li>
+          <li id="source-04"><a href="https://code.visualstudio.com/blogs/2026/08/26/agent-host-architecture">VS Code · Introducing the Agent Host</a><p>Session ownership in a separate Host, multiple clients, AHP, and external-client implementation.</p></li>
+          <li id="source-05"><a href="https://github.com/microsoft/vscode/blob/645f29cc3176500b4b5762ba887cf2a7f0ffdf2c/cli/src/commands/agent_endpoints.rs">VS Code source · Agent endpoints</a><p>An explicit discovery path exposing editor/standalone Host endpoints to trusted tools; not an extension read-only-permission API.</p></li>
+          <li id="source-06"><a href="https://github.com/microsoft/agent-host-protocol/blob/0d6d98392b06d1e698e20b538e99e8ed1e304935/docs/specification/chat-channel.md">AHP specification · Chat channel</a><p>Chat state, past-turn retrieval, live changes, and optional draft synchronization.</p></li>
+          <li id="source-07"><a href="https://github.com/microsoft/agent-host-protocol/blob/0d6d98392b06d1e698e20b538e99e8ed1e304935/docs/specification/authentication.md">AHP specification · Authentication</a><p>Connection and provider authentication; grounds for separately testing permissions across the full integration.</p></li>
+          <li id="source-08"><a href="https://github.com/github/copilot-sdk/releases/tag/v1.0.13">GitHub Copilot SDK · v1.0.13 release</a><p>Review baseline for SDK examples; not a direct check of the current npm latest version.</p></li>
+          <li id="source-09"><a href="https://github.com/github/copilot-sdk/blob/f13e4a2cc7e4e220974d2333142234e162a3252e/nodejs/src/types.ts">Copilot SDK source · Configuration and permission types</a><p>System instructions, tool lists, approval, memory/session store, and discovery configuration.</p></li>
+          <li id="source-10"><a href="https://github.com/github/copilot-sdk/blob/f13e4a2cc7e4e220974d2333142234e162a3252e/nodejs/src/session.ts">Copilot SDK source · Session</a><p>Events, sending, waiting, cancellation, Hooks, and error handling.</p></li>
+          <li id="source-11"><a href="https://github.com/github/copilot-sdk/blob/f13e4a2cc7e4e220974d2333142234e162a3252e/nodejs/src/client.ts">Copilot SDK source · Client</a><p>Runtime connection, empty-mode defaults, session creation, and resume behavior.</p></li>
+          <li id="source-12"><a href="https://github.com/github/copilot-sdk/blob/bba92dda4c4c5a34340817112968bd78485df006/docs/setup/bundled-cli.md">Copilot SDK · Bundled runtime</a><p>Matching runtime and platform-asset distribution. Verify actual versions and included files during packaging.</p></li>
+          <li id="source-13"><a href="https://github.com/github/copilot-sdk/blob/bba92dda4c4c5a34340817112968bd78485df006/docs/auth/authenticate.md">Copilot SDK · Authentication</a> · <a href="https://github.com/github/copilot-sdk/blob/bba92dda4c4c5a34340817112968bd78485df006/docs/features/usage-and-billing.md">Usage and billing</a><p>Supported authentication and model-call usage. Do not assume automatic Native-login sharing or free automatic checks.</p></li>
+          <li id="source-14"><a href="https://github.com/microsoft/vscode/blob/645f29cc3176500b4b5762ba887cf2a7f0ffdf2c/src/vs/platform/agentHost/node/shared/sessionServerTools.ts">VS Code source · Session server tools</a><p>Truncation and omitted tool results in session-context queries; differences from full-record subscriptions.</p></li>
+          <li id="source-15"><a href="https://code.visualstudio.com/docs/agents/reference/hooks-reference">VS Code · Hooks reference</a><p>Observable Hook events and harness-specific limitations; not a full session-access contract.</p></li>
+          <li id="source-16"><a href="https://code.visualstudio.com/api/extension-guides/webview">Webview API</a> · <a href="https://code.visualstudio.com/api/advanced-topics/remote-extensions">Remote Extensions</a> · <a href="https://code.visualstudio.com/api/extension-guides/workspace-trust">Workspace Trust</a><p>Independent UI, Extension Host location, and trust boundaries.</p></li>
+          <li id="source-17"><a href="https://github.com/github/copilot-sdk/blob/f13e4a2cc7e4e220974d2333142234e162a3252e/nodejs/src/generated/rpc.ts">Copilot SDK · Generated RPC types</a><p>The pinned version's explicit permission-rejection kind: reject. SDK-owned session control is separate from Native Driver authority.</p></li>
+          <li id="source-18"><a href="https://github.com/microsoft/agent-host-protocol/blob/0d6d98392b06d1e698e20b538e99e8ed1e304935/docs/specification/subscriptions.md">AHP · Subscriptions</a><p>subscribe channel, view, delivery, snapshots, action notifications, and server sequence contracts.</p></li>
+          <li id="source-19"><a href="https://github.com/microsoft/agent-host-protocol/blob/0d6d98392b06d1e698e20b538e99e8ed1e304935/docs/specification/lifecycle.md">AHP · Connection lifecycle</a><p>Reconnect replay/snapshot responses, missing channels, and notifications not replayed.</p></li>
+        </ol>
+        <p class="version-note">The MVP was revised to a file-based approach after the September 12, 2026 probe. Measurements apply to the current Copilot CLI/SDK session, not the actual Coach read profile or every Native harness. SDK examples use v1.0.13 commit f13e4a2 as their documentation baseline. VS Code 1.137.0-related source and AHP commit 0d6d983 are future-alternative references, not claims of latest versions. Distinguish document type/logic checks, file measurements, and actual SDK integration validation.</p>
+      </section>
+      <footer>
+        <p><strong>Wellactually · Technical Design and Data Flow</strong> — Revised September 12, 2026. A pre-implementation design document with internal contracts and code examples.</p>
+        <div class="related">
+          <span>Product definition and complete user flow</span>
+          <span>Pairing types and work progression</span>
+          <span>Target audience</span>
+          <span>Driver persona</span>
+          <span>Coach persona</span>
+          <span>Earlier SDK-centered design notes</span>
+        </div>
+        <p class="reading-note">The preferred MVP is existing Driver + local logs + built-in SDK read tools. Keep Coach-first entry, separate turn and session lifecycles, and post-session Knowledge Compilation from frozen input. AHP and dedicated Readers are not required components. Readable without external scripts, fonts, or images.</p>
+        <p class="back-top"><a href="#top">Back to top</a></p>
+      </footer>
+    </main>
+  </div>
+  <script>
+    const codePanels = Array.from(document.querySelectorAll(".code-panel"));
+    const toggleCode = document.getElementById("toggle-code");
+    let printStates = null;
+    function updateCodeControl() {
+      const allOpen = codePanels.every((panel) => panel.open);
+      toggleCode.textContent = allOpen ? "Collapse all code" : "Expand all code";
+      toggleCode.setAttribute("aria-expanded", String(allOpen));
+    }
+    codePanels.forEach((panel) => panel.addEventListener("toggle", updateCodeControl));
+    toggleCode.addEventListener("click", () => {
+      const expand = !codePanels.every((panel) => panel.open);
+      codePanels.forEach((panel) => { panel.open = expand; });
+      updateCodeControl();
+    });
+    document.getElementById("print-button").addEventListener("click", () => window.print());
+    window.addEventListener("beforeprint", () => {
+      if (printStates === null) printStates = codePanels.map((panel) => panel.open);
+      codePanels.forEach((panel) => { panel.open = true; });
+    });
+    window.addEventListener("afterprint", () => {
+      if (printStates !== null) {
+        codePanels.forEach((panel, index) => { panel.open = printStates[index]; });
+        printStates = null;
+        updateCodeControl();
+      }
+    });
+    document.documentElement.classList.add("js");
+    updateCodeControl();
+  </script>
+</body>
+</html>
