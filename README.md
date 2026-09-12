@@ -43,17 +43,28 @@ roles:
 - `docs/wellactually-product-definition.html`: preserved Korean original source
   artifact. It is intentionally exempt from the English-only policy for new
   repository documentation and must remain byte-for-byte unchanged.
+- `docs/ideation/*-kr.*`: preserved Korean discussion artifacts. These source
+  copies remain unchanged; their English siblings describe the same material
+  for repository readers. Earlier wording is historical context, not a competing
+  implementation contract.
+- `docs/ideation/product-description.html`: standalone English product overview.
+- `docs/ideation/technical-design.md` and `.html`: synchronized English technical
+  design, including the file-based MVP and Knowledge Compilation.
+- `docs/implementation-plan.md`: the current eight-slice implementation plan.
+  GitHub issues track the slices; implementation and live verification run
+  locally with GitHub Copilot.
 - `docs/plans/`: implementation plans derived from approved specs, created when
   needed.
 - `docs/adr/`: consequential architectural decisions, created when needed.
 
 ## Delivery Workflow
 
-1. Preserve the Korean source and keep the canonical English contract aligned
-  with it.
-2. Prove the read-only Agent Host Protocol context path and restricted GitHub
-  Copilot SDK Coach path with executable feasibility gates.
-3. Record accepted integration boundaries in an ADR and executable MVP plan.
+1. Preserve the Korean source artifacts and maintain the canonical English
+  contract with explicitly accepted later decisions.
+2. Start with the verified local CLI/SDK session-log format and prove the
+  restricted Copilot SDK Coach read/search profile with executable gates.
+3. Follow the file-based MVP implementation plan; revisit AHP only when a
+  required behavior or supported environment makes the file approach inadequate.
 4. Implement one complete pairing loop in TypeScript using test-driven vertical
   slices.
 5. Run verification before reporting completion.
@@ -68,5 +79,8 @@ AI coding agent to build an unrelated product is not sufficient challenge fit.
   architecture is chosen.
 - `.agents/skills/`: repository-local workflows available to coding agents.
 
-Build and test commands will be added after the integration feasibility gates
-determine the viable runtime adapters. Azure deployment is outside the MVP.
+The local file probe established retained-record reading and detection of one
+new tool result in the current CLI/SDK session; it did not verify every native
+harness or the future Coach permission profile. Build and test commands will be
+added as the implementation plan is executed. AHP, a dedicated workspace-reader
+service, and Azure deployment are not prerequisites for the MVP.

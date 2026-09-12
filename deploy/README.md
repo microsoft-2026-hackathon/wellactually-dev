@@ -1,8 +1,9 @@
 # Deployment
 
-Infrastructure and deployment artifacts will live here after the product
-architecture and target runtime are approved. Azure is a likely target, but no
-service, topology, or infrastructure-as-code tool has been selected yet.
+The initial delivery target is a locally installed VSIX and a reproducible
+hackathon demonstration. Azure infrastructure and a cloud backend are outside
+the MVP. Packaging and clean-profile verification are covered by
+`docs/implementation-plan.md` from the repository root.
 
 When deployment work begins, update this document with:
 

@@ -134,3 +134,24 @@ reported by the AI Driver, observed in a tool result, or left unverified.
 An observable session event that may support later product evaluation without
 being treated as evidence of competence, retention, productivity, code quality,
 or long-term learning.
+
+## Current Integration Decision
+
+The accepted hackathon MVP keeps the existing AI Driver and uses one explicitly
+selected local CLI/SDK session log for retained context and new-result
+detection. The AI Coach reuses verified, restricted SDK file-read/search tools
+for saved workspace code. AHP and a dedicated workspace-reader service are
+deferred alternatives, not prerequisites.
+
+The local file probe demonstrated record reading and one correlated result
+update in the tested session. Other native harnesses, the actual Coach read-only
+profile, large referenced outputs, rotation, and restart behavior still require
+verification. A file path or working directory alone is not an authorization
+boundary.
+
+Automatic coaching may evaluate relevant changes only during an active,
+user-initiated Pairing Session. Direct questions take priority; pause and exit
+stop automatic work without affecting Driver activity. Selected evidence may be
+kept in bounded local state for explicit session recovery and report generation,
+with a disclosed storage and deletion policy. The Knowledge Compiler receives
+only a frozen evidence snapshot and no live workspace permissions.

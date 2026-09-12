@@ -1,9 +1,15 @@
 # Application Code
 
-Application source and tests will live here after the product design and
-technology stack are approved. Python and JavaScript or TypeScript are expected,
-but frameworks and package managers are not yet selected. Until then, do not
-scaffold a framework or infer an architecture.
+Application source and tests will live here as the accepted TypeScript VS Code
+extension plan is implemented. The MVP preserves the existing Driver, reads one
+selected local CLI/SDK log, and uses a separate Copilot SDK Coach with verified
+read/search permissions. AHP, a dedicated workspace-reader service, and a cloud
+backend are not initial implementation requirements.
+
+Follow `docs/implementation-plan.md` from the repository root. Its first gate
+verifies the actual SDK read profile before dependent integration work. The
+package manifest, build, and tests do not exist yet; documentation and probe
+evidence must not be described as a working extension.
 
 When implementation begins, update this document with:
 

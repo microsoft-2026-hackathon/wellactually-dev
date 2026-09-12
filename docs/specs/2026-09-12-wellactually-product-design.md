@@ -2,13 +2,18 @@
 
 **Status:** Approved implementation contract  
 **Date:** September 12, 2026  
+**Revision:** File-based local MVP decisions accepted September 12, 2026
 **Original source artifact:** [Korean product definition](../wellactually-product-definition.html)  
 **Source SHA-256:** `b64e0ca20f608f86efdb971f267727cf7afa3ebb38e3680905529ca40cd39601`
 
 This document is the canonical English contract for implementation. The Korean
 HTML is the original product-definition artifact and must remain byte-for-byte
-unchanged. Where explanatory copies differ, this contract controls the product
-behavior implemented in the repository.
+unchanged. This contract incorporates later accepted integration decisions
+without rewriting that source. Korean discussion copies under
+`docs/ideation/*-kr.*` are also preserved artifacts; their English siblings
+provide maintained explanations. Where historical artifacts or explanatory
+copies differ, this contract controls the product behavior implemented in the
+repository.
 
 ## Product Definition
 
@@ -85,7 +90,9 @@ and approval flow.
 
 The AI Coach surfaces assumptions, alternatives, counterexamples, constraints,
 and useful engineering lenses. It may provide a bounded explanation or ask a
-question when the user requests coaching.
+question when the user requests coaching. During an active, user-initiated
+Pairing Session, relevant new evidence may also trigger a bounded coaching
+evaluation. This is not always-on surveillance or a gate on Driver execution.
 
 The AI Coach does not make the final choice, write or rewrite a finished Driver
 instruction, send messages to the Driver, edit code, execute commands, approve
@@ -137,11 +144,22 @@ facts, explains only what is necessary, and does not repeat the same objection
 without new evidence. The user may reject its suggestions and request sources or
 clarification. The Coach must state uncertainty and correct unsupported claims.
 
+Direct questions take priority over automatic evaluation. Reuse a warm Coach
+session, batch relevant log changes, stream useful responses, and discard stale
+responses after context, binding, pause, or exit changes. Do not turn every
+filesystem event into a model call or let the Coach's own read results trigger
+an evaluation loop. Measure queue, context, tool, and model latency separately;
+the time to detect a log update is not the time to a useful Coach response.
+
 ## Knowledge Compilation
 
 Knowledge Compilation is a best-effort process performed after session exit. It
 uses only available, user-approved Coach conversation, Human Navigator decision
-records, and Driver evidence. It produces a static HTML Knowledge Report with:
+records, selected Driver evidence, and code evidence actually used during the
+session. Capture those inputs in a frozen snapshot at an explicit cutoff.
+Compiler execution must not reread the live workspace or acquire the Coach's
+file permissions. It produces structured data which the extension validates
+and renders into a static HTML Knowledge Report with:
 
 - the session scope and exit state;
 - the Human Navigator's initial position and later judgment changes;
@@ -187,31 +205,72 @@ The MVP is a TypeScript VS Code extension that demonstrates one complete loop:
 `user starts pairing -> Coach discussion -> human-authored Driver instruction -> selected Driver Result -> joint review -> user ends -> optional HTML report`
 
 The extension provides a dedicated Coach `WebviewView`; the Extension Host owns
-session state, connection state, Coach calls, and report export. The initial
-integration hypotheses are:
+session state, selected-log identity, Coach calls, and report export.
 
-- a read-only adapter can observe one explicitly selected Agent Host Protocol
-  chat with provenance and visible completeness state;
-- an independent GitHub Copilot SDK session can provide bounded Coach responses
-  with all unneeded tools disabled and every permission request denied.
+### File-based integration first
 
-Both hypotheses require executable feasibility gates before architecture that
-depends on them is implemented. If selected-chat observation is not viable, the
-MVP uses a clearly labeled manual `Share Driver Result` path. If the Coach SDK
-boundary is not viable, the demo uses a deterministic guided-question flow. A
-fixture or replay path may support tests and venue recovery but must never be
-presented as live observation.
+The accepted hackathon path is:
+
+- Preserve the existing Driver interface and runtime rather than creating a
+  second extension-owned Driver.
+- Read one explicitly selected local CLI/SDK JSONL session log for retained
+  context and new-result detection. A small file-change and complete-record
+  helper may project the required events; do not build a general reader
+  framework or copy all sessions into a database.
+- Let the independent Copilot SDK Coach use verified built-in file-read,
+  directory-list, and search tools for saved workspace code. No separate
+  Workspace Reader service is required. Unneeded editing, shell, delegation,
+  and Driver-control tools remain unavailable.
+- Authorize only verified read operations within Shared Scope. Deny unknown
+  permission requests and operations; the working directory is not a sandbox.
+  Keep SDK state/configuration separate from the project.
+- Record selected evidence and provenance for joint review. Historical log
+  records do not count as new Driver Instructions. File changes alone do not
+  prove a tool succeeded or that a human authored a particular action.
+
+A local probe read approximately 19.7 MB / 2,720 JSONL records from the current
+Copilot CLI/SDK session, correlated a harmless tool-output marker by
+`toolCallId`, detected its persisted completion after approximately 249 ms with
+100 ms polling, and reopened the result after stopping the watcher. It used no
+AHP connection or database query. This was one observation, not a latency SLA or
+proof that all native Copilot harnesses share the same storage format.
+
+The next blocking integration gate verifies the actual Coach read/search
+profile, path restrictions, supported authentication, and runtime compatibility.
+Large referenced outputs, log rotation, and restart recovery also need scoped
+verification. Do not use unrelated real sessions or credentials as test data.
+
+### Alternatives and failure handling
+
+AHP is a future alternative if required state cannot be obtained from files or
+broader/remote harness support requires a structured host interface. It is not a
+prerequisite for the file-based MVP and does not itself guarantee read-only
+credentials. Reconsider the integration boundary explicitly if a gate fails;
+do not silently enable broad tools or substitute a different architecture.
+
+A manual sharing, fixture, replay, or deterministic recovery path may be used
+only with its limitations clearly identified. It must not be presented as live
+observation, successful SDK integration, or equivalent evidence that the
+file-based contract passed.
 
 ## Safety, Privacy, and Trust
 
 - Driver context is read-only and limited to explicit Shared Scope. Unsent
   drafts and hidden model reasoning are out of scope.
 - Prompts, turns, tool output, source excerpts, paths, reports, and credentials
-  are sensitive. Session evidence remains in memory by default; only an explicit
-  report export is persisted.
+  are sensitive. Keep active evidence in memory where practical; bounded
+  checkpoints and frozen report inputs may be persisted in a separate local
+  extension-state directory for exit/recovery. Disclose what is retained and
+  support deletion. This is distinct from the user's explicit HTML export and
+  from the Driver runtime's own logs. Do not persist all raw logs or put private
+  state in the repository.
+- Project and log read access is limited to explicitly approved paths and
+  fields. Raw logs may contain private instructions or credentials; filesystem
+  permission alone does not filter their contents. Use controlled fixtures and
+  selected projections, and verify exclusions for read and search tools.
 - Restricted Mode may show product guidance and disconnected Coach UI, but it
-  disables workspace-derived context, external Agent Host endpoints, and live
-  connections until the workspace is trusted.
+  disables workspace/log-derived context and live SDK work until the workspace
+  is trusted. Any later AHP connection must obey the same trust boundary.
 - The Webview uses typed message validation, output escaping or sanitization,
   restrictive local-resource roots, and a `default-src 'none'` Content Security
   Policy with nonce-bound external scripts and styles.
@@ -220,12 +279,14 @@ presented as live observation.
 
 ## Non-Goals
 
-The MVP does not include automatic current-chat discovery, continuous work
-surveillance, automatic Coach interruption, generated or rewritten Driver
-instructions, automatic Driver messaging, a separate curriculum, learning
-scores, streaks, organization analytics, multi-harness orchestration, Azure
-deployment, marketplace hardening, voice input, unsent-draft interception, or a
-claim of demonstrated learning effectiveness.
+The MVP does not include automatic current-chat discovery, outside-session work
+surveillance, blocking Driver execution on Coach approval, generated or
+rewritten Driver instructions, automatic Driver messaging, a separate
+curriculum, learning scores, streaks, organization analytics, multi-harness
+orchestration, Azure deployment, marketplace hardening, voice input,
+unsent-draft interception, a dedicated workspace-reader service, or a claim of
+demonstrated learning effectiveness. Bounded automatic evaluation during an
+active voluntary session is in scope; it stops on pause or exit.
 
 ## Acceptance Criteria
 
@@ -247,3 +308,18 @@ while preserving every authority and evidence boundary above. In particular:
    cache keys, revised criteria, result review, and an optional report.
 8. Product copy and demo narration frame effectiveness and learning transfer as
    hypotheses, not established outcomes.
+9. The declared supported environment can read approved workspace files and
+   selected Driver evidence while rejecting forbidden operations; mock tests
+   alone do not satisfy the live read-profile gate.
+10. Direct input takes priority, stale output is not presented as current, and
+    real response latency is measured with sample counts and failures.
+11. Exit fixes the report's evidence cutoff. Later file/log changes cannot
+    silently alter an existing report, and Compiler isolation is tested.
+
+## Implementation Tracking
+
+Use `docs/implementation-plan.md` for eight verifiable implementation milestones.
+GitHub issues track those milestones, while development and live tests run
+locally with GitHub Copilot. An issue may span several work sessions; do not
+assume one prompt, one uninterrupted model run, or a hosted coding-agent
+environment can satisfy every gate.
