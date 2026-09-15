@@ -2,15 +2,17 @@
 
 **Discussion baseline:** September 11, 2026
 
-**English edition:** September 12, 2026
+**Maintained edition:** September 16, 2026
 
 **Status:** Product framing. Market size and effectiveness remain hypotheses.
 
-This English edition preserves the scope of the initial audience discussion and
+This edition preserves the scope of the initial audience discussion and
 uses the subsequently agreed framing: the gap concerns opportunities to apply
 established engineering methods and know-how, not access to a senior colleague's
-judgment as an end in itself. The Korean discussion is retained separately,
-unchanged. The canonical English product contract controls implementation.
+judgment as an end in itself. The [Korean discussion](target-audience-kr.md)
+is retained separately, unchanged, as a historical original. The
+[canonical product contract](../specs/2026-09-12-wellactually-product-design.md)
+controls implementation.
 
 ## 1. One-Sentence Definition
 
@@ -123,18 +125,18 @@ constraints to preserve, and when to inspect the results.
 - Avoid leaving consequential unknowns to an unreviewed agent decision.
 - Adjust the next instruction after inspecting the result.
 
-Having Coach finish and forward an instruction may remove precisely the
+Having Pair finish and forward an instruction may remove precisely the
 practice this audience needs. The human's own instruction and its consequences
 are part of the experience.
 
 ## 7. Product Direction
 
-The core pattern is **AI Driver — Human Navigator — AI Coach**.
+The core pattern is **AI Driver — Human Navigator — AI Pair**.
 
 ### Human Navigator
 
 The human owns consequential choices and directly instructs the Driver. They
-can reject, defer, or question a Coach suggestion.
+can reject, defer, or question a Pair suggestion.
 
 ### AI Driver
 
@@ -142,11 +144,12 @@ The Driver investigates, implements, and verifies within the human's goal and
 constraints. It should be capable at that work; the product does not require
 the human to type all implementation details.
 
-### AI Coach
+### AI Pair
 
-Coach surfaces relevant considerations the human has not yet raised. It can
-discuss architecture as well as concrete code and results, without substituting
-its preferred design for the human's choice.
+Within a human-triggered discussion, Pair surfaces relevant considerations the
+human has not yet raised. It can discuss architecture as well as concrete code
+and results, without substituting its preferred design for the human's choice
+or reacting automatically to Driver activity.
 
 The current direction includes:
 
@@ -156,16 +159,18 @@ The current direction includes:
   choice.
 - **Process-centered support:** code, diffs, logs, and tests are evidence for
   judgment, not merely inputs to a static review report.
-- **Human instruction ownership:** Coach does not write or send a finished
+- **Human instruction ownership:** Pair does not write or send a finished
   instruction, even if it could ask the human to approve it.
 - **Optional pairing:** start on an existing personal, self-directed learning,
   or work project when a decision warrants discussion; do not require daily or
   per-task use.
 - **A useful exit:** leave the pairing session independently of Driver work,
-  with optional Knowledge Compilation from the evidence gathered.
+  without a required retrospective or post-conversation model call.
 
-The initial discussion considered Coach-written tests as an optional extension.
-The current MVP excludes it: Coach uses restricted reading and search, and the
+Knowledge Compilation and reports are not part of the current prototype.
+
+The initial discussion considered Pair-written tests as an optional extension.
+The current MVP excludes it: Pair uses restricted reading and search, and the
 human delegates implementation and verification to the Driver.
 
 Questions should expose useful thinking, not become an endless hidden-answer
@@ -174,7 +179,7 @@ broader curriculum outside the session.
 
 ## 8. What Is Not the Core Value
 
-- A chatbot that only explains concepts after being asked.
+- A chatbot that defines concepts without helping examine engineering judgment.
 - A reviewer that only lists code errors and diffs.
 - A convenience service that merely runs tests.
 - Automatic forwarding of instructions to the Driver.
@@ -189,30 +194,35 @@ defines the intended pairing experience.
 **Wellactually** refers to the “Well, actually...” colleague who points out an
 overlooked exception or assumption.
 
-The intended interruption is not nitpicking or a display of authority. It is a
-grounded contribution that exposes a decision the human might otherwise miss.
-The name does not require every response to start with that phrase.
+The intended contribution is not nitpicking or a display of authority. It
+exposes a decision the human might otherwise miss within a discussion they
+chose to start, not an unsolicited interruption. The name does not require
+every response to start with that phrase.
 
-**Driver implements. Coach surfaces considerations. The human decides and
+**Driver implements. Pair surfaces considerations. The human decides and
 instructs.**
 
 ## 10. Hypotheses to Evaluate
 
 - How many AI-native juniors experience a comparable gap?
 - Which tasks and decisions make it most apparent?
-- When is a proactive question useful, and when is it distracting?
+- When is a question within a human-triggered discussion useful or distracting?
 - On a similar later task, can the human formulate relevant questions and
-  instructions without Coach?
+  instructions without Pair?
 - Does perceived learning match observable independent judgment?
 - What level of support is useful without making development unnecessarily
   burdensome?
 
 Market size and learning effects are not established. User interviews and
 observations can refine the audience; stronger claims about retention or
-transfer require a later study rather than session counts or report generation.
+transfer require a later study rather than session counts.
 
 ## Related Material
 
-The product description, technical design, pairing-model discussion, and Coach
-and Driver persona drafts provide additional context. Earlier explorations of
-permissions and automation are not all adopted by the current product contract.
+- [Project context](../../CONTEXT.md) defines current domain language.
+- [Product design](../specs/2026-09-12-wellactually-product-design.md) defines
+  current roles, permissions and behavior.
+- [User guide](../user-guide.md) describes the implemented conversation flow.
+
+Preserved Korean ideation sources describe earlier explorations, including
+permissions and automation that are not part of the current product contract.

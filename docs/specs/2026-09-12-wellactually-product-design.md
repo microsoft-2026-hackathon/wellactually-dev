@@ -1,325 +1,204 @@
 # Wellactually Product Design
 
-**Status:** Approved implementation contract  
-**Date:** September 12, 2026  
-**Revision:** File-based local MVP decisions accepted September 12, 2026
-**Original source artifact:** [Korean product definition](../wellactually-product-definition.html)  
-**Source SHA-256:** `b64e0ca20f608f86efdb971f267727cf7afa3ebb38e3680905529ca40cd39601`
+**Status:** Approved prototype contract, revised September 16, 2026.
+The user approved SDK-first simplification, removed automatic observation and
+Knowledge Compilation, and fixed the product language to Korean.
+The later September 16 access decision replaces log-file selection with recent
+VS Code session selection and authorizes two complete read-only directory trees.
+The approved pairing persona prioritizes shared engineering judgment rather
+than generic agent reconnaissance and exhaustive checklist answers.
+This supersedes earlier report, language-selection, log-ingestion,
+review-context, pairing-stage and persistent recovery requirements.
 
-This document is the canonical English contract for implementation. The Korean
-HTML is the original product-definition artifact and must remain byte-for-byte
-unchanged. This contract incorporates later accepted integration decisions
-without rewriting that source. Korean discussion copies under
-`docs/ideation/*-kr.*` are also preserved artifacts; their English siblings
-provide maintained explanations. Where historical artifacts or explanatory
-copies differ, this contract controls the product behavior implemented in the
-repository.
+The [original Korean artifact](../wellactually-product-definition.html) and
+every `docs/ideation/*-kr.*` file remain byte-for-byte unchanged as historical
+sources. They may describe superseded features; this contract governs current
+behavior. The maintained [target audience](../ideation/target-audience.md)
+provides customer and problem framing, not a separate implementation contract.
 
-## Product Definition
+## Customer and Value
 
-Wellactually helps AI-native junior developers selectively pair with AI in
-their existing projects so they can apply established engineering methods,
-design principles, and practical judgment while doing real work.
+The Primary Customer is an AI-native junior developer who can build with
+coding agents but has limited experience making engineering judgments.
+Wellactually helps examine assumptions, alternatives, constraints, evidence,
+and verification criteria in an existing project.
 
-It does not provide a separate educational project or attempt to teach a full
-curriculum. A user's personal, learning, or company project supplies the
-context. The product adds a bounded pairing experience when the user encounters
-an unfamiliar or consequential decision.
+The target is the judged `Hack for Agentic Coding` Executive Challenge and
+Seoul Venue judging. Inspiration comes from connecting earlier human reasoning
+to actual coding results; Business Value from better-informed delegation;
+Customer Focus from a low-friction conversation; Feasibility from SDK reuse;
+Make Something from an installed extension and a demonstrable Pair conversation.
+The working demo deadline is before September 18 at 09:00 in Seoul. The global
+video deadline is September 21 at 11:59 PM Pacific. Follow
+[event rules](../hackathon-2026.md); no sensitive demo data or invented learning
+claims.
 
-## Primary Customer
+## Roles
 
-The Primary Customer is an AI-native junior developer who can build and deploy
-software with coding agents but has had limited opportunity to apply established
-engineering methods, design principles, and practical judgment in real work.
+- The Human Navigator makes decisions and writes/sends Driver instructions.
+- The existing AI Driver researches, edits, executes and verifies independently.
+- The separate AI Pair explains, questions and reviews when the human asks.
+  It cannot edit, execute commands, delegate, send Driver instructions, approve
+  Driver operations, or stop the Driver.
 
-Not every junior developer has this problem. Experienced developers may also
-benefit in unfamiliar domains, but their needs do not set the initial product
-standard.
+Persona text is not a permission mechanism. The runtime must withhold tools
+that exceed the Pair role.
 
-## Problem
+### Pairing behavior
 
-The problem is a capability-formation gap, not the decay of an existing skill.
-A developer may complete a task while gaining too little experience deciding:
+Answer the human's actual question and help clarify an important engineering
+judgment together. Offer a provisional view with its reason, assumptions or
+counterexample; make the tradeoff concrete when useful. Do not withhold a useful
+answer to force another exchange. General questions remain general rather than
+being interpreted as requests to restore or modify a repository feature.
 
-- what evidence to inspect before choosing a solution;
-- why one approach fits the current constraints better than another;
-- which assumptions, exceptions, and change effects require review;
-- what to delegate to an agent and what to verify personally.
+Prioritize the consequential issue instead of exhausting every adjacent topic.
+Carry earlier choices, reasons and rejected suggestions into the next turn.
+Ask at most one focused question only when it would materially change the
+advice. Do not impose a word limit, a mandatory closing question, an interview
+or a fixed answer template; honor explicit requests for detailed explanations
+and comprehensive checklists.
 
-Task completion, test success, and generated code are observable outcomes.
-They do not by themselves demonstrate understanding, independent judgment, or
-long-term learning.
+Use SDK `customize` for the `identity`, `tone` and `tool_efficiency` sections
+rather than appending a Pair label to the default coding-agent identity or
+replacing the entire system prompt. Preserve SDK safety/tool-instruction
+sections and host-enforced read-only permissions. Load the persona when a new
+Pair session starts; evaluate its actual behavior through a multi-turn
+human/model conversation, not merely prompt-string tests.
 
-## Product Principles
+## User Flow
 
-1. **Keep using AI.** The product does not pursue learning by withholding useful
-   coding agents or making the AI Driver intentionally ineffective.
-2. **Leave consequential judgment with the human.** The human understands the
-   reasons and constraints, chooses the direction, and writes the instruction.
-3. **Pair selectively.** The user starts pairing when a decision merits the
-   additional time. There is no required frequency, streak, quiz, completion
-   gate, or surveillance-first mode.
-4. **Teach only what the current decision needs.** The Coach asks one important
-   question at a time and gives the minimum explanation needed to proceed.
-5. **Separate evidence from inference.** The product records what was discussed,
-   stated, reported, or verified without treating those records as proof of
-   learning.
-6. **Make exit unconditional.** The user can stop because understanding is
-   sufficient or simply pause because of time, fatigue, or uncertainty.
+1. Open the right-hand Pair view and start a discussion about a design or
+   implementation concern.
+2. The first message starts a Pair against the current trusted local project.
+   A single workspace folder is selected automatically. For multiple folders,
+   use the active editor's project or ask only when ambiguous.
+3. Reuse existing authentication where supported. If no usable authentication
+   is available, use the public GitHub provider rather than private caches.
+   A signed-in account does not necessarily authorize every extension/runtime.
+4. Discuss the engineering judgment. The Pair uses its persistent SDK session
+   and reads relevant project files with SDK tools.
+5. Optionally choose a recent VS Code Copilot Driver session in settings.
+   Show its title, project and activity time, with current-project sessions first.
+   Discovery reads existing metadata, not conversation bodies. Selection checks
+   the session identity/header but does not ingest subsequent records.
+6. Ask the Pair to examine the Driver result. It directly reads/searches the
+   selected session's records and artifacts using the ongoing conversation. There is no
+   file watcher, automatic message, or background review.
+7. Continue naturally. No instruction confirmation or iteration transition
+   is required. Stop the current reply or end the conversation at any time.
+8. Start a new conversation when needed; it resets the in-memory transcript.
 
-## Roles and Authority
+There is no separate Start button, workspace-sharing wizard, mandatory Driver
+connection, or report feature. Opening the view alone does not invoke a model.
+A missing local project is explained; remote/virtual workspaces are not claimed.
 
-### Human Navigator
+## UI and Language
 
-The Human Navigator owns the problem, direction, scope, constraints, expected
-behavior, and next action. They write and send every AI Driver instruction in
-their own words, interpret the result, and decide whether to continue or end.
+The transcript dominates the Secondary Side Bar and the composer is pinned.
+Settings contain project information and Driver connection. Compact
+controls expose stop, end and new chat. No evidence dashboard is required.
 
-The Human Navigator is not an approval button or a relay between two AIs.
-Existing code, logs, and results may be shared to reduce transfer work, but the
-product must preserve the human's judgment and authorship.
+The empty state uses an AI pair-programming heading and a short product
+description, not an invitation to submit questions to an agent. It has no
+persistent welcome notice or optional-Driver onboarding sentence.
+Use discussion/message wording in the composer. Keep the first-message
+project-sharing disclosure and meaningful operational notices/errors.
 
-### AI Driver
+Product controls, native contribution captions, host messages and Pair
+responses are Korean-only, independent of the editor locale. There is no
+language preference or selector. Preserve original code, identifiers and
+quoted source excerpts; do not translate them in place. Keep drafts, caret,
+scroll and history through normal updates.
 
-The AI Driver researches, implements, and verifies competently within the Human
-Navigator's instruction. It asks the human before making a consequential policy
-or scope change. It continues to use its existing interface, tools, permissions,
-and approval flow.
+Enter sends, Shift+Enter adds a line, and IME composition does not send.
+Incoming text does not pull the user away from older messages. Basic safe
+formatting, keyboard navigation, accessible dialogs, and visible errors remain.
+Webview actions are validated once before host execution. Untrusted text never
+becomes executable HTML or a command URI.
 
-### AI Coach
+## SDK and Direct File Access
 
-The AI Coach surfaces assumptions, alternatives, counterexamples, constraints,
-and useful engineering lenses. It may provide a bounded explanation or ask a
-question when the user requests coaching. During an active, user-initiated
-Pairing Session, relevant new evidence may also trigger a bounded coaching
-evaluation. This is not always-on surveillance or a gate on Driver execution.
+Use SDK 1.0.13 / bundled CLI 1.0.83, TypeScript, Node's existing test runner and
+the current native macOS Apple Silicon package. No new framework, database,
+cloud backend or general reader is required.
 
-The AI Coach does not make the final choice, write or rewrite a finished Driver
-instruction, send messages to the Driver, edit code, execute commands, approve
-tools, or cancel Driver work. Persona text alone is not an adequate authority
-boundary; the implementation must withhold those capabilities structurally.
+Reuse one Pair session. Enable Infinite Sessions for compaction; separate
+Memory and cross-session search remain disabled. Compaction is not guaranteed
+verbatim recall. Ending deletes only owned temporary runtime data after
+verified cleanup; arbitrary host-restart continuity is not promised.
 
-## Pairing Experience
+Allow read-only `view` and `grep` on exactly two complete trees: the current
+project root and the selected Driver session directory. Allow directory
+listings and all files within them, including hidden files, dependencies,
+session metadata, records and artifacts. Do not filter by filename, sensitivity
+or extension. Actual SDK format support and bounded output still apply.
+Resolve symlinks against the union of the two roots; never authorize a target
+outside both. Native recursive tools must not traverse external directory links.
+Search may omit Git metadata during recursive traversal; explicit file access
+remains authorized.
 
-A Pairing Session follows this adaptable sequence. Steps may be skipped,
-repeated, or ended according to the user's need.
+Keep automatic configuration, skills, MCP and agent discovery disabled.
+Changing the connection preserves the Pair conversation and revokes the old
+session's additional scope. Paths already inside the project stay readable.
+Never resume the Driver session as the Pair.
 
-1. **Choose pairing and Shared Scope.** The user starts a Coach conversation and
-   chooses which task context and artifacts may be shared. Connecting a Driver
-   is not required to begin. The product does not collect unrelated chats or
-   materials.
-2. **Set the Session Focus.** The user describes the current uncertainty, such as
-   not knowing whether a cache design fits. The Coach helps identify the
-   judgment under review and distinguishes current evidence from unknowns.
-3. **Run a Deliberation Loop.** The Human Navigator and Coach examine evidence,
-   assumptions, alternatives, and constraints. The Human Navigator determines
-   scope and completion criteria.
-4. **Author the Driver Instruction.** When delegation is useful, the Human
-   Navigator writes and sends the instruction in the existing Driver UI. This
-   ends one deliberation turn; it does not end the Pairing Session.
-5. **Review the Driver Result.** If pairing continues, the Human Navigator and
-   Coach review selected, provenance-bearing results. They distinguish passed,
-   failed, and unverified claims, then choose another loop or exit.
-6. **End or pause.** Ending stops Coach observation and intervention. It never
-   cancels, approves, completes, or otherwise mutates Driver work. The product
-   shows when the Driver may still be running.
-7. **Optionally compile knowledge.** The user may inspect and save a static HTML
-   Knowledge Report, then return to normal work.
+The local recent-session adapter reads `workspace.yaml` metadata and file
+timestamps under `~/.copilot/session-state`, restricted to
+`client_name: vscode-agent-host`. Use the maintained YAML parser rather than a
+partial custom YAML implementation. Revalidate identity/header on selection.
+Report unreadable entries explicitly. This is a version-dependent format
+integration, not an all-provider VS Code API or general home-directory scan.
 
-## Coach Interaction Rules
+Raw log interpretation belongs to the Pair, not a host event normalizer.
+Source permissions, input/output bounds and partial-output disclosure remain
+host responsibilities. File changes do not prove execution success. Driver
+assertions must not be represented as independently verified outcomes.
 
-The Coach uses the mode needed by the current decision rather than forcing a
-fixed curriculum:
+Both authorized trees may contain sensitive material. The first-message and
+session-selection UI must make the full read scope clear, including hidden and
+sensitive files. Do not grant the parent session store or the whole home
+directory, follow unapproved external artifacts, or imply automatic secret
+removal. Reading permitted configuration files does not execute their contents.
+The working directory is not an OS sandbox.
 
-| Mode | Coach surfaces | Human practices |
-| --- | --- | --- |
-| Problem definition | Problem evidence and improvement goal | Separating observations from assumptions |
-| Design reasoning | Alternatives, constraints, tradeoffs, and operating cost | Choosing a direction and reconsideration conditions |
-| Delegation design | Scope, preserved behavior, and verification criteria | Writing a bounded instruction directly |
-| Exploration and debugging | Observations that discriminate between hypotheses | Requesting evidence and revising a hypothesis |
-| Specification and counterexamples | Boundary inputs, concurrency, and failure order | Deciding expected behavior and validation criteria |
+Only one human-requested turn runs at a time. Stop/end must suppress late
+events, settle the owned request and report failures. No automatic scheduler,
+cooldown, polling cursor, event ancestry graph or instruction-ownership state
+machine is needed. No model-based synthetic preflight runs during ordinary startup.
 
-The Coach asks one important question at a time, avoids repeating established
-facts, explains only what is necessary, and does not repeat the same objection
-without new evidence. The user may reject its suggestions and request sources or
-clarification. The Coach must state uncertainty and correct unsupported claims.
+## Transcript and End
 
-Direct questions take priority over automatic evaluation. Reuse a warm Coach
-session, batch relevant log changes, stream useful responses, and discard stale
-responses after context, binding, pause, or exit changes. Do not turn every
-filesystem event into a model call or let the Coach's own read results trigger
-an evaluation loop. Measure queue, context, tool, and model latency separately;
-the time to detect a log update is not the time to a useful Coach response.
+Keep a small bounded transcript for UI, not a second semantic
+memory system. Retain original user/Pair text and bounded tool excerpts
+actually seen. Source labels and partial flags describe the available record.
+Old display entries may be omitted at the transcript limit; the SDK manages
+conversation context separately.
 
-## Knowledge Compilation
+Ending stops the current Pair request and closes owned runtime resources.
+There is no separate evidence journal, revision hash, human-decision object,
+review-context graph, seven-day snapshot store, or restart recovery workflow.
 
-Knowledge Compilation is a best-effort process performed after session exit. It
-uses only available, user-approved Coach conversation, Human Navigator decision
-records, selected Driver evidence, and code evidence actually used during the
-session. Capture those inputs in a frozen snapshot at an explicit cutoff.
-Compiler execution must not reread the live workspace or acquire the Coach's
-file permissions. It produces structured data which the extension validates
-and renders into a static HTML Knowledge Report with:
+Knowledge Compilation and all associated generation, validation, preview,
+export, cache and frozen-input behavior are removed. This is a feature removal,
+not a disabled button or hidden code path. Earlier user-exported HTML files
+remain untouched. Pair suggestions are not human adoption, and discussion
+does not prove learning or competence.
 
-- the session scope and exit state;
-- the Human Navigator's initial position and later judgment changes;
-- reusable engineering lenses and their applicability limits;
-- verification levels that distinguish discussion, human explanation, Driver
-  report, observed tool result, and unverified work;
-- open questions, omitted evidence, and incomplete or disconnected context;
-- provenance linking claims to available sessions, turns, files, or results.
+## Verification and Non-Goals
 
-The report is a retrospective and reuse aid. Reading, saving, or generating it
-does not prove learning. Compilation failure never blocks session exit; the
-product reports the failure or omission and may offer retry or later export.
+Verify lazy startup, SDK session reuse, recent VS Code session discovery,
+directory and file access throughout both roots, external-link denial,
+old-session denial after reconnect, cancellation/late events, fixed Korean language,
+draft/IME behavior, safe text rendering and absence of removed controls/APIs.
 
-## Evidence and Evaluation Boundaries
+Use synthetic files for tool-level tests. Distinguish those from authenticated
+model-driven retrieval, compaction continuity, installed-host checks and real
+human evaluation. Existing historical SDK gates do not automatically prove the
+new flow. No response-speed target or new latency benchmark is required.
 
-Research evidence, product hypotheses, and observable product behavior must stay
-distinct in product copy, telemetry, reports, demos, and submissions.
-
-The initial research supports a possible gap between task completion and
-understanding under some conditions. It does not establish that all AI use harms
-learning, that all junior developers share the gap, or that Wellactually closes
-it. Human pair-programming research does not prove the effectiveness of an AI
-Coach, and retrospective research does not prove that an HTML report transfers
-skill.
-
-For the MVP, report only session-level Behavior Proxies, such as:
-
-- pairing was started voluntarily;
-- the human stated a decision or uncertainty;
-- a human-authored Driver Instruction was recorded;
-- selected Driver evidence was reviewed;
-- the human stated a next choice;
-- a report was generated with explicit completeness and provenance.
-
-Do not infer retention, competence, productivity, code quality, or long-term
-learning from those proxies. Long-term transfer requires a later study with
-repeated, unaided tasks.
-
-## MVP Scope
-
-The MVP is a TypeScript VS Code extension that demonstrates one complete loop:
-
-`user starts pairing -> Coach discussion -> human-authored Driver instruction -> selected Driver Result -> joint review -> user ends -> optional HTML report`
-
-The extension provides a dedicated Coach `WebviewView`; the Extension Host owns
-session state, selected-log identity, Coach calls, and report export.
-
-### File-based integration first
-
-The accepted hackathon path is:
-
-- Preserve the existing Driver interface and runtime rather than creating a
-  second extension-owned Driver.
-- Read one explicitly selected local CLI/SDK JSONL session log for retained
-  context and new-result detection. A small file-change and complete-record
-  helper may project the required events; do not build a general reader
-  framework or copy all sessions into a database.
-- Let the independent Copilot SDK Coach use verified built-in file-read,
-  directory-list, and search tools for saved workspace code. No separate
-  Workspace Reader service is required. Unneeded editing, shell, delegation,
-  and Driver-control tools remain unavailable.
-- Authorize only verified read operations within Shared Scope. Deny unknown
-  permission requests and operations; the working directory is not a sandbox.
-  Keep SDK state/configuration separate from the project.
-- Record selected evidence and provenance for joint review. Historical log
-  records do not count as new Driver Instructions. File changes alone do not
-  prove a tool succeeded or that a human authored a particular action.
-
-A local probe read approximately 19.7 MB / 2,720 JSONL records from the current
-Copilot CLI/SDK session, correlated a harmless tool-output marker by
-`toolCallId`, detected its persisted completion after approximately 249 ms with
-100 ms polling, and reopened the result after stopping the watcher. It used no
-AHP connection or database query. This was one observation, not a latency SLA or
-proof that all native Copilot harnesses share the same storage format.
-
-The next blocking integration gate verifies the actual Coach read/search
-profile, path restrictions, supported authentication, and runtime compatibility.
-Large referenced outputs, log rotation, and restart recovery also need scoped
-verification. Do not use unrelated real sessions or credentials as test data.
-
-### Alternatives and failure handling
-
-AHP is a future alternative if required state cannot be obtained from files or
-broader/remote harness support requires a structured host interface. It is not a
-prerequisite for the file-based MVP and does not itself guarantee read-only
-credentials. Reconsider the integration boundary explicitly if a gate fails;
-do not silently enable broad tools or substitute a different architecture.
-
-A manual sharing, fixture, replay, or deterministic recovery path may be used
-only with its limitations clearly identified. It must not be presented as live
-observation, successful SDK integration, or equivalent evidence that the
-file-based contract passed.
-
-## Safety, Privacy, and Trust
-
-- Driver context is read-only and limited to explicit Shared Scope. Unsent
-  drafts and hidden model reasoning are out of scope.
-- Prompts, turns, tool output, source excerpts, paths, reports, and credentials
-  are sensitive. Keep active evidence in memory where practical; bounded
-  checkpoints and frozen report inputs may be persisted in a separate local
-  extension-state directory for exit/recovery. Disclose what is retained and
-  support deletion. This is distinct from the user's explicit HTML export and
-  from the Driver runtime's own logs. Do not persist all raw logs or put private
-  state in the repository.
-- Project and log read access is limited to explicitly approved paths and
-  fields. Raw logs may contain private instructions or credentials; filesystem
-  permission alone does not filter their contents. Use controlled fixtures and
-  selected projections, and verify exclusions for read and search tools.
-- Restricted Mode may show product guidance and disconnected Coach UI, but it
-  disables workspace/log-derived context and live SDK work until the workspace
-  is trusted. Any later AHP connection must obey the same trust boundary.
-- The Webview uses typed message validation, output escaping or sanitization,
-  restrictive local-resource roots, and a `default-src 'none'` Content Security
-  Policy with nonce-bound external scripts and styles.
-- Authentication tokens are never written to repository files, reports, logs,
-  or persisted extension state.
-
-## Non-Goals
-
-The MVP does not include automatic current-chat discovery, outside-session work
-surveillance, blocking Driver execution on Coach approval, generated or
-rewritten Driver instructions, automatic Driver messaging, a separate
-curriculum, learning scores, streaks, organization analytics, multi-harness
-orchestration, Azure deployment, marketplace hardening, voice input,
-unsent-draft interception, a dedicated workspace-reader service, or a claim of
-demonstrated learning effectiveness. Bounded automatic evaluation during an
-active voluntary session is in scope; it stops on pause or exit.
-
-## Acceptance Criteria
-
-The implementation is acceptable when it can demonstrate the complete MVP loop
-while preserving every authority and evidence boundary above. In particular:
-
-1. A user can begin and end pairing without connecting a Driver or receiving
-   Coach approval.
-2. Only the Human Navigator authors and sends Driver instructions.
-3. Ending pairing cannot mutate or stop Driver activity.
-4. Driver evidence has visible provenance, completeness, connection, and
-   verification state; manual or replay data is unmistakably labeled.
-5. Coach failure and Knowledge Compilation failure do not block normal Driver
-   work or Pairing Session exit.
-6. The optional report escapes untrusted content, identifies missing evidence,
-   and makes no learning inference.
-7. The cache scenario from the source can demonstrate an initial Redis
-   assumption, freshness separation, a scoped investigation, language-dependent
-   cache keys, revised criteria, result review, and an optional report.
-8. Product copy and demo narration frame effectiveness and learning transfer as
-   hypotheses, not established outcomes.
-9. The declared supported environment can read approved workspace files and
-   selected Driver evidence while rejecting forbidden operations; mock tests
-   alone do not satisfy the live read-profile gate.
-10. Direct input takes priority, stale output is not presented as current, and
-    real response latency is measured with sample counts and failures.
-11. Exit fixes the report's evidence cutoff. Later file/log changes cannot
-    silently alter an existing report, and Compiler isolation is tested.
-
-## Implementation Tracking
-
-Use `docs/implementation-plan.md` for eight verifiable implementation milestones.
-GitHub issues track those milestones, while development and live tests run
-locally with GitHub Copilot. An issue may span several work sessions; do not
-assume one prompt, one uninterrupted model run, or a hosted coding-agent
-environment can satisfy every gate.
+Not in scope: Knowledge Compilation/reports, language selection, automatic
+observation, Driver control, prompt authorship, quizzes, learning scores, exact
+per-reply provenance graphs, all-harness discovery, artifacts outside both
+approved roots, persistent exit recovery, marketplace hardening, remote
+workspaces, AHP, or a separate Workspace Reader.

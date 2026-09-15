@@ -1,34 +1,32 @@
 # Agent Operating Instructions
 
-This repository uses a compact skill workflow for hackathon delivery. Load only
-the skills relevant to the current task; do not turn every change into a formal
-design exercise.
+Use the repository's TypeScript build, tests, and local VSIX delivery workflow.
+Keep changes focused; do not turn every change into a formal design exercise.
 
 ## Context
 
-Before project-specific planning or implementation, inspect these files when
-they exist:
+Before project-specific analysis, planning, implementation, or review, inspect:
 
 1. `README.md` for the product and development workflow.
 2. `CONTEXT.md` for canonical domain language.
 3. `docs/hackathon-2026.md` for event dates, submission requirements, judging
-  criteria, and policy constraints.
-4. `docs/adr/` for accepted architectural decisions.
-5. `docs/specs/` for approved feature designs.
-6. `docs/plans/` for current implementation plans.
+   criteria, and policy constraints.
+4. `docs/specs/2026-09-12-wellactually-product-design.md` for the approved
+   product and implementation contract.
+5. `code/README.md` for development, authentication, and verification limits.
+6. `deploy/README.md` and `deploy/demo-checklist.md` for delivery or demo work.
 
-Missing documents are not blockers. Do not invent decisions to fill them.
+Do not invent decisions to fill documentation gaps.
 
 `CONTEXT.md` and `docs/hackathon-2026.md` are mandatory context for every
 project analysis, plan, implementation, and review. If an event rule conflicts
 with the user's latest instruction, surface the conflict instead of guessing.
 
-Write all repository documentation in English, including Markdown files,
-code comments intended as documentation, ADRs, specifications, and plans.
-Existing Korean source artifacts are retained without rewriting:
+Write maintained repository documentation and documentation comments in English.
+Existing Korean source artifacts are retained byte-for-byte without rewriting:
 `docs/wellactually-product-definition.html` and `docs/ideation/*-kr.*`.
-Write their maintained explanatory versions in English; preserved source text
-does not override the canonical English product contract.
+Their preserved source text is historical, not a competing current product
+contract.
 
 ## Hackathon Decision Gate
 
@@ -49,20 +47,21 @@ focus on GitHub Copilot agentic coding experiences. The product itself must
 advance an agentic coding experience; using an AI coding agent to build an
 otherwise unrelated product is not sufficient challenge fit.
 
-## Skill Routing
+## Development Workflow
 
-- New or unclear product work: `brainstorming`; use `grill-with-docs` when the
-  idea needs deeper challenge or durable decisions.
-- Domain language and durable decisions: `domain-modeling`.
-- Module boundaries and public interfaces: `codebase-design`.
-- Multi-step implementation: `writing-plans`, followed by `tdd` in vertical
-  slices.
-- Bugs and failing tests: `systematic-debugging`.
-- UI creation and polish: `frontend-design`, then `baseline-ui`; use
-  `fixing-accessibility` for interactive controls, forms, and accessibility
-  review.
-- Before claiming completion: `verification-before-completion`.
+1. Follow `code/README.md`. Run commands from `code/`; use `npm ci` for initial
+   setup or when the lockfile changes or dependencies are missing.
+2. Build with `npm run build` or the `wellactually: build` task. Use the
+   **Wellactually Extension** F5 configuration for an Extension Development Host.
+3. Make complete, focused changes and add relevant regression tests. Run the
+   smallest relevant checks, then `npm test` and `npm run package` for delivery.
+4. Preserve the persistent read-only SDK conversation, human-triggered Pair
+   discussion, and independent Driver. Internal `coach` names and VS Code IDs
+   remain for compatibility; the role is Pair / **페어**.
+5. Use synthetic data for permission and SDK-tool checks. Follow
+   `deploy/demo-checklist.md` for installed-extension and live-model acceptance;
+   leave unperformed checks unchecked and report verification limits.
 
 Keep documentation proportional to the decision. Update `CONTEXT.md` when
-domain terms stabilize and add an ADR only for consequential, hard-to-reverse
-choices.
+domain terms stabilize and the canonical spec when approved behavior changes.
+Do not add a framework or planning document merely to complete a small change.

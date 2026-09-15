@@ -78,33 +78,43 @@ The coding agent that researches, implements, and verifies within the Human
 Navigator's instruction. Its work continues independently of the Pairing
 Session.
 
-**AI Coach**:
+**AI Pair**:
 The bounded conversational partner that surfaces assumptions, alternatives,
 counterexamples, constraints, and minimum necessary explanation. It neither
 makes the final choice nor authors or sends AI Driver instructions.
+Its pairing goal is to answer the actual question while clarifying an important
+engineering judgment together. It offers a provisional view with reasons and
+concrete examples, and carries the human's choices and objections forward.
+General questions stay general; repository inspection is not a default ritual.
+Questions are optional and should resolve a consequential uncertainty, not
+force an interview. Comprehensive explanations remain available when requested.
 
 **Pairing Session**:
 A voluntary, user-initiated period in which the Human Navigator asks the AI
-Coach to help examine one or more engineering judgments. It may begin without
+Pair to help examine one or more engineering judgments. It may begin without
 an AI Driver connection and may end while AI Driver work continues.
 
 **Shared Scope**:
 The task context, conversations, files, results, and other evidence that the
-Human Navigator explicitly allows Wellactually to use during a Pairing Session.
+Human Navigator allows Wellactually to use: the current project when sending
+the first Pair message, plus one Driver session selected in settings.
+The scopes are the complete project tree and the complete selected session tree,
+including hidden files, metadata, conversation records and artifacts.
+No separate start or repeated workspace-consent wizard is required.
 
 **Session Focus**:
 The current uncertainty or engineering judgment that the Human Navigator and AI
-Coach agree to examine.
+Pair agree to examine.
 
 **Deliberation Loop**:
-A bounded exchange in which the Human Navigator and AI Coach examine evidence,
+A bounded exchange in which the Human Navigator and AI Pair examine evidence,
 assumptions, alternatives, and constraints. Sending a Driver Instruction ends
 one loop turn but does not end the Pairing Session.
 
 **Driver Instruction**:
 The task direction that the Human Navigator writes and sends to the AI Driver in
 the existing Driver interface. It records human judgment and is never generated
-or rewritten by the AI Coach.
+or rewritten by the AI Pair.
 
 **Driver Result**:
 The AI Driver's reported outcome and available supporting evidence for a Driver
@@ -113,18 +123,17 @@ verified.
 
 **Result Review**:
 The Human Navigator's interpretation of a Driver Result, optionally supported by
-the AI Coach, that distinguishes observed evidence from reported or unverified
+the AI Pair, that distinguishes observed evidence from reported or unverified
 claims and leads to the next human choice.
 
 **Knowledge Compilation**:
-The optional, best-effort process that turns available Pairing Session evidence
-into structured retrospective data after the session ends. Failure never blocks
-session exit.
+A historical idea for a post-conversation retrospective, removed from the
+prototype on September 16. It is not an optional current feature; there is no
+Compiler or report generation.
 
 **Knowledge Report**:
-A static HTML artifact produced from Knowledge Compilation. It records judgment
-changes, reusable lenses, limits, open questions, provenance, and missing data;
-its existence does not prove learning.
+A historical HTML export from earlier versions. Existing exported files are
+user-owned and remain untouched; the current prototype does not create reports.
 
 **Verification Level**:
 The status that distinguishes what was discussed, explained by the human,
@@ -137,21 +146,54 @@ or long-term learning.
 
 ## Current Integration Decision
 
-The accepted hackathon MVP keeps the existing AI Driver and uses one explicitly
-selected local CLI/SDK session log for retained context and new-result
-detection. The AI Coach reuses verified, restricted SDK file-read/search tools
-for saved workspace code. AHP and a dedicated workspace-reader service are
-deferred alternatives, not prerequisites.
+The September 16 prototype uses one persistent Copilot SDK Pair.
+The first message starts it against the current trusted local project.
+Existing SDK or VS Code authentication is reused when available; interactive
+account access is only a fallback, not a mandatory onboarding step.
 
-The local file probe demonstrated record reading and one correlated result
-update in the tested session. Other native harnesses, the actual Coach read-only
-profile, large referenced outputs, rotation, and restart behavior still require
-verification. A file path or working directory alone is not an authorization
-boundary.
+The Pair has read-only access to exactly two directory trees: the current
+project root and the selected Driver session root. Directory listings and all
+files inside those roots are permitted without filename or extension exclusions.
+Paths and symlinks resolving outside both roots remain unauthorized.
+Tool output limits and supported formats are not extra permission scopes.
 
-Automatic coaching may evaluate relevant changes only during an active,
-user-initiated Pairing Session. Direct questions take priority; pause and exit
-stop automatic work without affecting Driver activity. Selected evidence may be
-kept in bounded local state for explicit session recovery and report generation,
-with a disclosed storage and deletion policy. The Knowledge Compiler receives
-only a frozen evidence snapshot and no live workspace permissions.
+The human selects a recent VS Code Copilot session by title, project and
+activity time, not a log file. Discovery reads existing `workspace.yaml`
+metadata and file timestamps from the local `.copilot/session-state` store,
+limited to `vscode-agent-host` sessions. It is a version-dependent local adapter,
+not a universal Copilot Chat API. Selection verifies the session header;
+the Pair then reads the original records and artifacts directly.
+The host does not watch, copy,
+normalize, correlate, or automatically react to Driver records. The human asks
+when to review results. The SDK maintains conversational context and performs
+compaction; separate cross-session Memory and search are not required.
+
+The host owns a small chat lifecycle, streaming/cancellation, path permissions,
+and a bounded transcript for display. There is no application-level
+deliberation state machine, evidence journal, review-context graph, instruction
+confirmation, automatic scheduler, or persistent exit-snapshot recovery.
+Deliberation Loop and Result Review remain conversational concepts, not stages
+the UI forces the user to advance.
+
+Both shared trees can contain secrets; there is no automatic sensitive-file
+exclusion or sanitization. Share only projects and sessions appropriate for the
+Pair's model service, and use synthetic data for demonstrations.
+
+The Secondary Side Bar contains the transcript and pinned composer. Settings
+contain project information and Driver connection only. Product controls,
+host messages and Pair responses use Korean; there is no language selector or
+language preference. Code, identifiers and quoted source excerpts are unchanged.
+The opening screen introduces AI pair programming with a product description
+and read-only project-sharing disclosure, not a persistent welcome notice or
+Driver-connection onboarding sentence.
+
+Ending stops only the Pair and cleans up owned runtime resources. There is no
+Knowledge Compilation, frozen report input, HTML renderer/exporter or report
+cache. A new chat resets the in-memory display transcript. Prior exported HTML
+and Driver logs are not deleted. Conversation activity cannot establish learning.
+
+Direct native SDK reads of synthetic external JSONL files were demonstrated
+before this revision, including late-range reads and search. A very long
+single-line record was truncated. These observations do not establish
+model-driven retrieval quality, universal harness support, or complete recall
+after compaction. Workspace paths alone are not an authorization boundary.
