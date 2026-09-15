@@ -1,0 +1,14 @@
+.vscode/**
+.probe-results/**
+test/**
+dist/test/**
+dist/src/scripts/**
+src/scripts/**
+src/**/*.ts
+src/**/*.cts
+tsconfig.json
+package-lock.json
+*.vsix
+node_modules/**/test/**
+node_modules/**/tests/**
+node_modules/**/docs/**

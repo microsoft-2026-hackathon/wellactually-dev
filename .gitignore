@@ -72,3 +72,8 @@ Thumbs.db
 
 # Archived Documents
 docs/archive/
+
+# Local extension and probe artifacts
+*.vsix
+.wellactually/
+code/.probe-results/
