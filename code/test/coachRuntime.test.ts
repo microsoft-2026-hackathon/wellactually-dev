@@ -408,3 +408,28 @@ test("turn deadline aborts and settles SDK work before surfacing the timeout", a
   assert.equal(session.listeners.size, 0);
   await runtime.close();
 });
+
+test("ordinary Chat source context names the exact transcript instead of inventing an SDK log directory", async () => {
+  const base = await mkdtemp(path.resolve(".chat-context-"));
+  try {
+    const project = path.join(base, "project");
+    const records = path.join(base, "chatSessions");
+    await mkdir(project);
+    await mkdir(records);
+    const file = path.join(records, "selected.jsonl");
+    await writeFile(file, '{"kind":0,"v":{"sessionId":"selected"}}\n');
+    const policy = await createReadPolicy(project);
+    await policy.setDriver({ kind: "vscode-chat", file, sessionId: "selected", title: "Ordinary Chat" });
+    const session = new FakeSession();
+    session.onSend = () => session.finish();
+    const runtime = attachCoachRuntime(session, policy, async () => {});
+    try {
+      for await (const _ of runtime.stream("Review the selected discussion", new AbortController().signal)) {}
+      assert.ok(session.prompts[0]?.includes(file));
+      assert.match(session.prompts[0]!, /standard VS Code Copilot Chat/);
+      assert.match(session.prompts[0]!, /exact JSON\/JSONL transcript/);
+      assert.match(session.prompts[0]!, /Never read the shared chatSessions parent or sibling chats/);
+      assert.doesNotMatch(session.prompts[0]!, /entire directory tree|Read its events\.jsonl/);
+    } finally { await runtime.close(); }
+  } finally { await rm(base, { recursive: true, force: true }); }
+});

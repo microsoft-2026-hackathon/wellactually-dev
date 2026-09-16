@@ -1,8 +1,19 @@
-export interface DriverSource {
+export interface SdkDriverSource {
+  kind?: "sdk";
   directory: string;
   sessionId: string;
   title: string;
 }
+
+export interface VscodeChatSource {
+  kind: "vscode-chat";
+  file: string;
+  artifactsDirectory?: string;
+  sessionId: string;
+  title: string;
+}
+
+export type DriverSource = SdkDriverSource | VscodeChatSource;
 
 /** 화면 표시용 기록이며, SDK의 대화 메모리나 검증된 사실을 나타내지는 않는다. */
 export interface ChatMessage {

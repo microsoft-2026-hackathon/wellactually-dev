@@ -41,8 +41,8 @@ test("read tools follow the question's intent while preserving both source scope
   assert.match(policy, /read them only when their contents are relevant/);
   assert.match(policy, /proactively read the relevant evidence/);
   assert.match(policy, /do not ask for permission again/);
-  assert.match(policy, /entire Driver session directory tree/);
-  assert.match(policy, /without filename or extension exclusions/);
+  assert.match(policy, /entire\s+Driver session directory tree/);
+  assert.match(policy, /without\s+filename or extension exclusions/);
   assert.match(policy, /View directories to discover files/);
   assert.match(policy, /Answer the conceptual question directly/);
   assert.match(policy, /Pair's own internal session is not the Driver/);

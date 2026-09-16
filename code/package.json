@@ -83,6 +83,7 @@
   },
   "dependencies": {
     "@github/copilot-sdk": "1.0.13",
+    "@streamparser/json": "0.0.22",
     "yaml": "2.9.0"
   },
   "devDependencies": {

@@ -54,8 +54,12 @@ export async function createReadPolicy(workspaceDirectory: string): Promise<Read
   async function safePath(input: unknown): Promise<string> {
     if (typeof input !== "string" || !input || input.includes("\0")) throw new Error("READ_PATH_DENIED");
     const absolute = path.resolve(root, input);
-    const roots = driver ? [root, driver.directory] : [root];
-    const allowed = (candidate: string): boolean => roots.some(scope => canonicalPathAllowed(scope, candidate));
+    const roots = [root];
+    if (driver?.kind === "vscode-chat") {
+      if (driver.artifactsDirectory) roots.push(driver.artifactsDirectory);
+    } else if (driver) roots.push(driver.directory);
+    const allowed = (candidate: string): boolean => roots.some(scope => canonicalPathAllowed(scope, candidate)) ||
+      (driver?.kind === "vscode-chat" && candidate === driver.file);
     if (!allowed(absolute)) throw new Error("READ_PATH_DENIED");
     const canonical = await realpath(absolute);
     if (!allowed(canonical)) throw new Error("READ_PATH_DENIED");
@@ -165,8 +169,21 @@ export async function createReadPolicy(workspaceDirectory: string): Promise<Read
     sourceFiles,
     async setDriver(next) {
       if (next) {
-        if (!path.isAbsolute(next.directory) || path.normalize(next.directory) !== next.directory ||
-            !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/.test(next.sessionId) ||
+        if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/.test(next.sessionId)) throw new Error("READ_DRIVER_INVALID");
+        if (next.kind === "vscode-chat") {
+          const extension = path.extname(next.file);
+          if (![".jsonl", ".json"].includes(extension) ||
+              path.basename(next.file, extension) !== next.sessionId ||
+              !path.isAbsolute(next.file) || path.normalize(next.file) !== next.file ||
+              await realpath(next.file) !== next.file || !(await lstat(next.file)).isFile()) {
+            throw new Error("READ_DRIVER_INVALID");
+          }
+          if (next.artifactsDirectory) {
+            const expected = path.join(path.dirname(path.dirname(next.file)), "chatEditingSessions", next.sessionId);
+            if (next.artifactsDirectory !== expected || await realpath(expected) !== expected ||
+                !(await lstat(expected)).isDirectory()) throw new Error("READ_DRIVER_INVALID");
+          }
+        } else if (!path.isAbsolute(next.directory) || path.normalize(next.directory) !== next.directory ||
             path.basename(next.directory) !== next.sessionId ||
             await realpath(next.directory) !== next.directory ||
             !(await lstat(next.directory)).isDirectory()) throw new Error("READ_DRIVER_INVALID");

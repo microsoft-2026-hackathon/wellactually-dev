@@ -1,10 +1,10 @@
 import * as vscode from "vscode";
 import { realpath } from "node:fs/promises";
-import { homedir } from "node:os";
 import path from "node:path";
 import type { DriverSource } from "./contracts.js";
 import { createChat } from "./pairing/chat.js";
-import { inspectDriverSession, listDriverSessions } from "./driver/source.js";
+import { copilotSessionStores, driverPickerItem, inspectCatalogSession, listDriverCatalog } from "./driver/catalog.js";
+import { vscodeCatalogPaths } from "./driver/vscodeCatalog.js";
 import { createDriverSelection } from "./driver/selection.js";
 import { createCoachRuntime } from "./runtime/coachRuntime.js";
 import { getHostGitHubToken } from "./runtime/sdkRuntime.js";
@@ -198,8 +198,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
       if (targetChat !== chat) throw new Error("WRONG_CHAT_ID");
       workspacePath = project;
       publishState();
-      const sessionStateDirectory = path.join(homedir(), ".copilot", "session-state");
-      const { sessions, failures } = await listDriverSessions(sessionStateDirectory, project);
+      const catalogPaths = vscodeCatalogPaths(context.globalStorageUri.fsPath);
+      const { sessions, failures } = await listDriverCatalog(copilotSessionStores(), catalogPaths);
       for (const failure of failures) output.appendLine(`${failure.code}: ${failure.sessionId}`);
       if (failures.length) {
         void vscode.window.showWarningMessage(hostText("driverSessionsSkipped", { count: failures.length }));
@@ -209,22 +209,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
         return;
       }
       if (targetChat !== chat || targetChat.getState().status !== "idle") throw new Error("CHAT_BUSY");
-      const selected = await vscode.window.showQuickPick(sessions.map(session => ({
-        label: session.title.replace(/\s+/g, " "),
-        description: session.workspace,
-        detail: hostText("driverLastActive", {
-          time: new Date(session.modifiedTime).toLocaleString("ko-KR"),
-          sessionId: session.sessionId,
-        }),
-        sessionId: session.sessionId,
-      })), {
-        title: hostText("chooseDriver"),
+      const selected = await vscode.window.showQuickPick(sessions.map(driverPickerItem), {
+        title: hostText("chooseDriver", { count: sessions.length }),
         placeHolder: hostText("driverSessionScope"),
         matchOnDescription: true,
         matchOnDetail: true,
       });
       if (!selected) return;
-      const source = await inspectDriverSession(sessionStateDirectory, selected.sessionId);
+      const source = await inspectCatalogSession(selected.session, catalogPaths);
       if (targetChat !== chat) throw new Error("WRONG_CHAT_ID");
       await targetChat.setDriver(source);
       if (targetChat !== chat || targetChat.getState().status === "ended") throw new Error("WRONG_CHAT_ID");

@@ -4,12 +4,21 @@ const messages = {
   authDetail: "기존 SDK 인증을 사용할 수 없습니다. 별도 페어가 GitHub 계정을 사용하도록 허용하세요. 인증 정보는 대화에 포함되지 않습니다.",
   chooseWorkspace: "이 대화에서 참고할 열린 프로젝트를 선택하세요",
   noWorkspace: "페어가 코드를 참고할 수 있도록 로컬 프로젝트 폴더를 여세요.",
-  chooseDriver: "최근 VS Code 드라이버 세션 선택",
-  driverSessionScope: "선택한 세션 폴더의 모든 기록과 파일을 페어와 공유합니다. 현재 프로젝트의 세션이 먼저 표시됩니다.",
+  chooseDriver: "드라이버 세션 선택 · 전체 {count}개",
+  driverSessionScope: "일반 Copilot Chat과 에이전트 세션을 전체 프로젝트에서 찾습니다. 제목이나 프로젝트로 검색하세요. 선택한 세션만 페어와 공유합니다.",
   driverLastActive: "최근 활동: {time} · 세션: {sessionId}",
-  noDriverSessions: "연결할 VS Code Copilot 세션이 없습니다. VS Code에서 Copilot 세션을 시작한 뒤 다시 선택하세요.",
-  driverSessionsSkipped: "세션 {count}개의 정보를 읽을 수 없어 목록에서 제외했습니다. Wellactually 출력에서 오류를 확인하세요.",
-  driverConnected: "드라이버 세션을 연결했습니다. 논의에 필요할 때 페어가 세션 폴더 전체를 읽을 수 있으며 기록을 복사하거나 자동 감시하지 않습니다.",
+  noDriverSessions: "저장된 Copilot 세션이 없습니다. 세션을 만든 뒤 다시 선택하세요.",
+  driverNoRecords: "로컬 대화 기록 없음",
+  driverSessionNotReady: "선택한 세션의 대화 기록이 아직 준비되지 않았습니다 ({code}). 해당 세션에서 대화를 시작한 뒤 다시 선택하세요.",
+  driverUntitled: "제목 없는 세션",
+  driverUnknownProject: "프로젝트 정보 없음",
+  driverVscodeSource: "VS Code 에이전트 세션",
+  driverChatSource: "VS Code Copilot Chat",
+  driverCopilotSource: "Copilot 저장소",
+  driverSourceUnavailable: "연결 가능한 로컬 기록을 확인할 수 없습니다",
+  driverSessionSourceUnavailable: "선택한 세션의 로컬 기록을 찾거나 확인할 수 없습니다 ({code}). VS Code에서 원래 세션을 확인하세요. 다른 세션의 기록으로 대신 연결하지 않습니다.",
+  driverSessionsSkipped: "세션 정보 {count}건을 읽지 못했습니다. 일부 제목이나 세션이 누락될 수 있습니다. Wellactually 출력에서 오류를 확인하세요.",
+  driverConnected: "드라이버 세션을 연결했습니다. 논의에 필요할 때 페어가 선택한 세션의 기록과 파일을 읽을 수 있으며 기록을 복사하거나 자동 감시하지 않습니다.",
   driverDisconnected: "드라이버 연결을 해제했습니다. 이미 논의한 발췌는 대화에 남습니다.",
   connecting: "가능한 기존 인증을 사용해 페어를 연결하고 있습니다...",
   ended: "대화를 종료했습니다. 드라이버는 계속 작업할 수 있습니다. 새 대화에서 논의를 시작하세요.",
@@ -26,5 +35,8 @@ export function hostText(key: HostMessage, values?: MessageValues): string {
 }
 
 export function hostFailureText(code: string): string {
-  return hostText(code === "COACH_CLEANUP_FAILED" ? "cleanupFailed" : "failed", { code });
+  const key = code === "COACH_CLEANUP_FAILED" ? "cleanupFailed"
+    : code === "DRIVER_SESSION_NOT_READY" ? "driverSessionNotReady"
+    : code === "DRIVER_SESSION_SOURCE_UNAVAILABLE" ? "driverSessionSourceUnavailable" : "failed";
+  return hostText(key, { code });
 }

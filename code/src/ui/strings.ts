@@ -22,7 +22,7 @@ export const uiMessages = {
   selectingDriver: "드라이버 세션 선택이 끝날 때까지 연결 변경이나 해제를 기다려 주세요.",
   selectDriver: "드라이버 세션 선택", changeDriver: "드라이버 세션 변경", disconnectDriver: "연결 해제",
   driverSession: "세션: {sessionId}",
-  settingsConnectionHelp: "선택한 세션 폴더의 기록, 메타데이터, 파일 전체를 읽기 전용으로 공유합니다. 원본을 복사하거나 감시하지 않습니다. 민감한 파일도 자동 제외되지 않습니다.",
+  settingsConnectionHelp: "선택한 세션의 기록과 파일을 읽기 전용으로 공유합니다. 일반 Copilot Chat은 해당 대화 파일과 전용 편집 자료만 공유하며 다른 대화에는 접근하지 않습니다. 원본을 복사하거나 감시하지 않으며 민감한 내용도 자동 제외되지 않습니다.",
   projectTitle: "현재 프로젝트", noProject: "열린 로컬 프로젝트가 없습니다.",
   projectHelp: "첫 메시지를 보내면 프로젝트 폴더 전체를 읽기 전용으로 공유합니다. 숨김 파일과 민감한 파일도 포함됩니다. 파일 수정이나 드라이버 제어는 할 수 없습니다.",
   emptyQuestion: "논의할 내용을 입력하세요.",

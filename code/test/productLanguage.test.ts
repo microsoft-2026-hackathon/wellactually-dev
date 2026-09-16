@@ -61,3 +61,14 @@ test("unverified cleanup gives explicit recovery guidance without hiding its fai
   assert.match(message, /창을 다시 로드/);
   assert.equal(hostFailureText("OTHER_FAILED"), hostText("failed", { code: "OTHER_FAILED" }));
 });
+
+test("the Driver picker describes all sessions and explains records that are not ready", () => {
+  assert.match(hostText("chooseDriver", { count: 42 }), /전체 42개/);
+  assert.match(hostText("driverSessionScope"), /일반 Copilot Chat.*전체 프로젝트/);
+  assert.equal(hostText("driverChatSource"), "VS Code Copilot Chat");
+  assert.doesNotMatch(hostText("driverSessionScope"), /현재 프로젝트.*먼저/);
+  assert.match(hostText("driverNoRecords"), /로컬 대화 기록 없음/);
+  const message = hostFailureText("DRIVER_SESSION_NOT_READY");
+  assert.match(message, /DRIVER_SESSION_NOT_READY/);
+  assert.match(message, /해당 세션에서 대화를 시작/);
+});
