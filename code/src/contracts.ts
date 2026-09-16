@@ -1,3 +1,6 @@
+import type { ModelInfo } from "@github/copilot-sdk";
+export type ReasoningEffort = NonNullable<ModelInfo["supportedReasoningEfforts"]>[number];
+
 export interface SdkDriverSource {
   kind?: "sdk";
   directory: string;
@@ -32,6 +35,8 @@ export type CoachDelta =
 export interface CoachRuntime {
   readonly sessionId: string;
   readonly closed: boolean;
+  listModels(): Promise<readonly PairModel[]>;
+  setModel(selection: ModelSelection): Promise<void>;
   /** 새 질문에 대한 응답 조각과 도구 활동, 읽은 자료를 순차적으로 전달한다. */
   stream(prompt: string, signal: AbortSignal): AsyncIterable<CoachDelta>;
   /** Replace or revoke the selected Driver session tree without resetting the conversation. */
@@ -46,4 +51,23 @@ export interface ChatState {
   id: string;
   status: "idle" | "working" | "ended";
   messages: readonly ChatMessage[];
+}
+export interface ModelSelection {
+  modelId: string;
+  reasoningEffort?: ReasoningEffort;
+}
+
+export interface PairModel {
+  id: string;
+  name: string;
+  reasoningEfforts: readonly ReasoningEffort[];
+  defaultReasoningEffort?: ReasoningEffort;
+}
+
+export interface ModelViewState {
+  id: string;
+  name: string;
+  reasoningEffort: ReasoningEffort | null;
+  reasoningAvailable: boolean | null;
+  busy: boolean;
 }

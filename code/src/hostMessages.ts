@@ -25,6 +25,16 @@ const messages = {
   workspaceChanged: "열린 프로젝트가 바뀌었습니다. 현재 프로젝트를 사용하려면 새 대화를 시작하세요.",
   failed: "작업을 완료하지 못했습니다: {code}. 드라이버에는 영향이 없습니다.",
   cleanupFailed: "실행 자원 정리를 확인하지 못했습니다 ({code}). 새 대화를 다시 시도하고, 계속 실패하면 진행 중인 작업을 확인한 뒤 VS Code 창을 다시 로드하세요.",
+  chooseModel: "페어 모델 선택",
+  modelRecommendation: "복잡한 설계 논의에는 최신 고성능(프론티어) 모델을 권장합니다. 응답 속도와 사용량도 고려하세요.",
+  chooseReasoning: "추론 수준 선택",
+  modelNextMessage: "대화와 드라이버 연결은 유지하고 다음 메시지부터 적용합니다.",
+  selectedOption: "현재 선택",
+  reasoningLow: "낮음", reasoningMedium: "보통", reasoningHigh: "높음",
+  reasoningXhigh: "매우 높음", reasoningMax: "최대",
+  reasoningUnavailable: "이 모델은 선택 가능한 추론 수준을 제공하지 않습니다 ({code}). 모델의 기본 설정을 사용합니다.",
+  modelSwitchFailed: "모델 변경을 확인하지 못해 현재 대화를 종료했습니다 ({code}). 새 대화에서 다시 선택하세요.",
+  modelSaveFailed: "모델은 이번 대화에 적용됐지만 다음 대화를 위한 설정을 저장하지 못했습니다 ({code}).",
 } as const;
 
 export type HostMessage = keyof typeof messages;
@@ -36,6 +46,9 @@ export function hostText(key: HostMessage, values?: MessageValues): string {
 
 export function hostFailureText(code: string): string {
   const key = code === "COACH_CLEANUP_FAILED" ? "cleanupFailed"
+    : code === "COACH_REASONING_UNAVAILABLE" ? "reasoningUnavailable"
+    : code === "COACH_MODEL_SWITCH_FAILED" ? "modelSwitchFailed"
+    : code === "COACH_MODEL_PREFERENCE_SAVE_FAILED" ? "modelSaveFailed"
     : code === "DRIVER_SESSION_NOT_READY" ? "driverSessionNotReady"
     : code === "DRIVER_SESSION_SOURCE_UNAVAILABLE" ? "driverSessionSourceUnavailable" : "failed";
   return hostText(key, { code });

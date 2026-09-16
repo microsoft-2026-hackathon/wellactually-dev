@@ -1,4 +1,4 @@
-import type { ChatState, DriverSource } from "../contracts.js";
+import type { ChatState, DriverSource, ModelViewState } from "../contracts.js";
 
 export const MAX_MESSAGE_BYTES = 16 * 1024;
 
@@ -7,7 +7,9 @@ type ChatAction =
   | "stopReply"
   | "end"
   | "selectDriver"
-  | "disconnectDriver";
+  | "disconnectDriver"
+  | "selectModel"
+  | "selectReasoning";
 
 // UI 명령은 호스트가 처리하는 작업이며, 모델에 전달하는 자연어 지시가 아니다.
 export type ViewCommand =
@@ -23,6 +25,7 @@ export interface ViewState {
   notice: string;
   starting: boolean;
   selectingDriver: boolean;
+  model: ModelViewState;
 }
 
 export type ViewEvent =
@@ -34,7 +37,7 @@ export type ViewEvent =
   | { type: "error"; requestId?: string; message: string };
 
 const chatActions = new Set<string>([
-  "newChat", "stopReply", "end", "selectDriver", "disconnectDriver",
+  "newChat", "stopReply", "end", "selectDriver", "disconnectDriver", "selectModel", "selectReasoning",
 ]);
 
 /** 웹뷰 명령 검증 실패를 공통 오류 코드와 상세 사유로 전달한다. */

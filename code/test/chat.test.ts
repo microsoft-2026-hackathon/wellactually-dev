@@ -3,10 +3,16 @@ import assert from "node:assert/strict";
 import type { CoachRuntime } from "../src/contracts.js";
 import { createChat } from "../src/pairing/chat.js";
 
+const modelControl = {
+  async listModels() { return []; },
+  async setModel() {},
+};
+
 test("the first question starts one Pair and subsequent questions reuse its context", async () => {
   let starts = 0;
   const prompts: string[] = [];
   const runtime: CoachRuntime = {
+    ...modelControl,
     sessionId: "coach", closed: false,
     async *stream(prompt) { prompts.push(prompt); yield { kind: "text", text: "A useful explanation." }; },
     async setDriver() {}, async cancel() {}, async close() {},
@@ -39,6 +45,7 @@ test("stopping during startup never sends the question and ending closes the eve
   const ending = chat.end();
   assert.equal(chat.getState().status, "ended");
   ready({
+    ...modelControl,
     sessionId: "coach", closed: false, async *stream() { sent++; },
     async setDriver() {}, async cancel() {}, async close() { closed++; },
   });
@@ -55,6 +62,7 @@ test("a partial reply is retained, late text is excluded, and every question req
   const pending = new Promise<void>(resolve => { release = resolve; });
   const prompts: string[] = [];
   const runtime: CoachRuntime = {
+    ...modelControl,
     sessionId: "coach", closed: false,
     async *stream(prompt) {
       prompts.push(prompt);
@@ -84,6 +92,7 @@ test("a partial reply is retained, late text is excluded, and every question req
 test("runtime and cleanup failures stay visible and retrying end can finish cleanup", async () => {
   let closes = 0;
   const runtime: CoachRuntime = {
+    ...modelControl,
     sessionId: "coach", closed: false, async *stream() { throw new Error("MODEL_FAILED"); },
     async setDriver() {}, async cancel() {},
     async close() { if (++closes === 1) throw new Error("CLEANUP_FAILED"); },
@@ -100,6 +109,7 @@ test("a closed runtime ends the chat instead of accepting another doomed message
   let closed = false;
   let sends = 0;
   const runtime: CoachRuntime = {
+    ...modelControl,
     sessionId: "coach",
     get closed() { return closed; },
     async *stream() {
@@ -123,6 +133,7 @@ test("connecting or disconnecting a Driver never sends an automatic message", as
   let sends = 0;
   const selections: (string | null)[] = [];
   const runtime: CoachRuntime = {
+    ...modelControl,
     sessionId: "coach", closed: false, async *stream() { sends++; yield { kind: "text", text: "Ready." }; },
     async setDriver(driver) { selections.push(driver?.sessionId ?? null); },
     async cancel() {}, async close() {},
@@ -142,6 +153,7 @@ test("a pending Driver permission update cannot overlap a question or owned shut
   const changed = new Promise<void>(resolve => { release = resolve; });
   const order: string[] = [];
   const runtime: CoachRuntime = {
+    ...modelControl,
     sessionId: "coach", closed: false, async *stream() { yield { kind: "text", text: "Hello" }; },
     async setDriver() { await changed; order.push("changed"); },
     async cancel() {}, async close() { order.push("closed"); },
@@ -170,6 +182,7 @@ test("stopping startup propagates cancellation before a delayed authentication c
     },
     publish() {}, emit() {},
   });
+
   const submitted = chat.submit("Question");
   await Promise.resolve();
   const stopping = chat.stop();
@@ -178,4 +191,37 @@ test("stopping startup propagates cancellation before a delayed authentication c
   await submitted;
   assert.equal(wouldPrompt, false);
   await chat.end();
+});
+
+test("model changes are lazy before the first message and serialize with Driver changes, messages and shutdown", async () => {
+  let release!: () => void;
+  const switching = new Promise<void>(resolve => { release = resolve; });
+  const calls: string[] = [];
+  const runtime: CoachRuntime = {
+    sessionId: "same-conversation", closed: false,
+    async *stream() { calls.push("message"); yield { kind: "text", text: "Answer" }; },
+    async listModels() { return [{ id: "model", name: "Model", reasoningEfforts: [] }]; },
+    async setModel() { await switching; calls.push("switched"); },
+    async setDriver() {}, async cancel() {}, async close() { calls.push("closed"); },
+  };
+  let starts = 0;
+  const chat = createChat({
+    async createRuntime() { starts++; return runtime; }, publish() {}, emit() {},
+  });
+  await chat.setModel({ modelId: "model" });
+  assert.equal(starts, 0);
+  assert.equal(await chat.listModels(), undefined);
+  await chat.submit("First");
+  assert.deepEqual((await chat.listModels())?.map(model => model.id), ["model"]);
+  const pending = chat.setModel({ modelId: "model" });
+  await assert.rejects(chat.submit("Concurrent"), /CHAT_BUSY/);
+  await assert.rejects(chat.setDriver(null), /CHAT_BUSY/);
+  await assert.rejects(chat.setModel({ modelId: "model" }), /CHAT_BUSY/);
+  const ended = chat.end();
+  assert.deepEqual(calls, ["message"]);
+  release();
+  await pending;
+  await ended;
+  assert.deepEqual(calls, ["message", "switched", "closed"]);
+  assert.equal(starts, 1);
 });

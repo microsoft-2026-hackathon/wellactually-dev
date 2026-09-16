@@ -1,4 +1,5 @@
 import { uiText, type UiMessage } from "./strings.js";
+import type { MessageValues } from "../format.js";
 
 export interface WebviewHtmlOptions {
   nonce: string;
@@ -25,7 +26,7 @@ export function createWebviewHtml(options: WebviewHtmlOptions): string {
     if (!/^(https:|vscode-webview:|vscode-resource:|vscode-webview-resource:)\/\//.test(uri)) throw new Error("INVALID_WEBVIEW_OPTIONS");
   }
   /** 한국어 UI 문구를 HTML에 삽입할 수 있는 이스케이프된 문자열로 가져온다. */
-  const tx = (key: UiMessage): string => attribute(uiText(key));
+  const tx = (key: UiMessage, values: MessageValues = {}): string => attribute(uiText(key, values));
   const nonce = attribute(options.nonce);
   const policy = `default-src 'none'; base-uri 'none'; form-action 'none'; style-src ${options.cspSource} 'nonce-${options.nonce}'; script-src 'nonce-${options.nonce}' 'strict-dynamic'; connect-src 'none';`;
   return `<!doctype html>
@@ -73,13 +74,31 @@ export function createWebviewHtml(options: WebviewHtmlOptions): string {
 
     <form id="question-form" class="chat-composer" novalidate>
       <label class="sr-only" for="coach-question">${tx("askLabel")}</label>
-      <textarea id="coach-question" name="question" rows="3" required aria-describedby="composer-state question-error" placeholder="${tx("composerPlaceholder")}" disabled></textarea>
+      <div class="composer-input">
+        <textarea id="coach-question" name="question" rows="3" required aria-describedby="composer-state question-error composer-keyboard-hint" placeholder="${tx("composerPlaceholder")}" disabled></textarea>
+        <div class="composer-bottom">
+          <div id="model-controls" class="composer-selectors" role="group" aria-label="${tx("modelControls")}" aria-busy="false">
+            <span class="composer-role" title="${tx("pairRoleHelp")}">${tx("pairRole")}</span>
+            <button id="select-model" type="button" class="composer-picker" data-command="selectModel" aria-haspopup="dialog" aria-label="${tx("selectModel", { model: uiText("model") })}" title="${tx("modelHelp")}" disabled>
+              <span id="model-label" class="picker-label">${tx("model")}</span>
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
+            </button>
+            <button id="select-reasoning" type="button" class="composer-picker" data-command="selectReasoning" aria-haspopup="dialog" aria-describedby="reasoning-description" aria-label="${tx("selectReasoning", { level: uiText("reasoningDefault") })}" title="${tx("reasoningUnknown")}" disabled>
+              <span id="reasoning-label" class="picker-label">${tx("reasoningLabel", { level: uiText("reasoningDefault") })}</span>
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
+            </button>
+            <span id="reasoning-description" class="sr-only">${tx("reasoningUnknown")}</span>
+          </div>
+          <div class="composer-actions">
+            <button type="button" id="stop-reply" class="icon-button secondary" data-command="stopReply" aria-label="${tx("stopReply")}" title="${tx("stopReply")}" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1"/></svg></button>
+            <button type="submit" id="send-question" class="icon-button send-button" aria-label="${tx("ask")}" title="${tx("ask")}" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button>
+          </div>
+        </div>
+      </div>
       <p id="question-error" class="error small" role="alert" hidden></p>
-      <div class="composer-bottom">
+      <div class="composer-meta">
         <p id="composer-state" class="muted small">${tx("connecting")}</p>
-        <span class="muted small keyboard-hint">${tx("composerHint")}</span>
-        <button type="button" id="stop-reply" class="icon-button secondary" data-command="stopReply" aria-label="${tx("stopReply")}" title="${tx("stopReply")}" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1"/></svg></button>
-        <button type="submit" id="send-question" class="icon-button send-button" aria-label="${tx("ask")}" title="${tx("ask")}" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button>
+        <span id="composer-keyboard-hint" class="muted small keyboard-hint">${tx("composerHint")}</span>
       </div>
     </form>
     <footer id="ended-actions" class="ended-actions" hidden>

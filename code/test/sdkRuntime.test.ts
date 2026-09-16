@@ -98,6 +98,9 @@ test("persistent Pair customizes behavior without replacing SDK safety or read p
     await mkdir(storage);
     const defaults = await readSessionConfig(root, storage);
     assert.equal(defaults.config.model, "claude-haiku-4.5");
+    assert.equal(defaults.config.reasoningEffort, undefined);
+    const reasoning = await readSessionConfig(root, storage, "synthetic-model", "high");
+    assert.equal(reasoning.config.reasoningEffort, "high");
     const { config, policy } = await readSessionConfig(root, storage, "gpt-5-mini");
     assert.equal(config.model, "gpt-5-mini");
     assert.deepEqual(config.infiniteSessions, { enabled: true });

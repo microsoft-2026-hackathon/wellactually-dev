@@ -13,6 +13,7 @@ test("the extension includes executable entry points, policies, and the native S
     "dist/src/ui/strings.js", "dist/src/format.js", "dist/src/hostMessages.js", "package.nls.json",
     "dist/src/ui/chatMessage.js", "media/coach.svg",
     "dist/src/driver/catalog.js", "dist/src/driver/vscodeCatalog.js", "dist/src/driver/chatCatalog.js",
+    "dist/src/runtime/models.js",
   ]) {
     assert.ok(existsSync(filename), `Missing package asset: ${filename}`);
   }

@@ -12,6 +12,8 @@ export async function run(): Promise<void> {
   assert.equal(state.chat.status, "idle");
   assert.equal(state.starting, false);
   assert.equal(state.selectingDriver, false);
+  assert.equal(state.model.busy, false);
+  assert.equal(state.model.id, "claude-haiku-4.5");
   assert.equal(state.chat.messages.length, 0);
   assert.equal("report" in state, false);
   assert.equal("language" in state, false);
