@@ -15,7 +15,7 @@ for compatibility; they are not the product-facing role name.
 - VS Code 1.137.0+, a trusted local project, macOS Apple Silicon VSIX.
 - Node `^20.19.0 || >=22.12.0`; SDK 1.0.13 / bundled CLI 1.0.83.
 - One persistent read-only Pair, invoked only by human messages.
-- Complete current project tree plus one selected VS Code Driver session tree.
+- Complete current project plus one selected Driver's original records/artifacts.
 - Recent-session picker using existing metadata, without collecting or copying logs.
 - Chat, source excerpts, stop, end and new chat.
 - No language selector, automatic observation, Knowledge Compilation or reports.
@@ -52,15 +52,21 @@ No additional framework, database, linter or cloud service is introduced.
 ## Pairing behavior
 
 The Pair is an engineering judgment partner, not an autonomous coding agent
-or a report generator. It answers the actual question, prioritizes a useful
-tradeoff, explains a provisional view with a concrete example, and builds on
-the human's choices and objections. It asks at most one focused question only
-when the answer would materially affect the advice. No fixed length, mandatory
-closing question or blanket checklist ban is imposed.
+or a report generator. In discussion it adds one useful observation, question,
+tentative concern or small suggested check, then lets the human respond.
+It does not try to finish the topic or produce a complete explanation on every
+turn. An unverified concern can be raised as a possibility without first
+assembling an evidence report; it must not be presented as a verified defect.
+The Pair builds on the human's responses rather than preempting their decisions.
+Explicit requests for facts, detail, checklists or verification still receive
+the needed response. There is no forced question, artificial brevity, hidden
+answer or conversational template.
 
 General design questions do not trigger repository reconnaissance. File reads
-should resolve a relevant factual uncertainty in a project/session-specific
-discussion. Full read authorization does not require reading every source.
+serve the current discussion or an explicit verification request, not a need
+to prove every hunch before mentioning it. Full read authorization does not
+require reading every source, but the Pair should perform relevant available
+lookups when asked rather than unnecessarily redirecting them to the human.
 
 SDK `systemMessage.mode: "customize"` replaces only three behavior sections:
 `identity` from [coach.md](src/policies/coach.md), `tone` from
@@ -94,38 +100,95 @@ If startup is stopped while account consent is pending, a later approval is
 not used to open an authenticated Pair client for that cancelled request.
 The native consent dialog itself may remain open until the provider resolves it.
 
-`wellactually.model` applies to new Pair conversations; the default is
-`claude-haiku-4.5`, with actual read-tool inventory checked. There is no
-`wellactually.language` configuration. A stale user setting is ignored rather
-than silently rewritten.
+The composer has model and reasoning selectors. Available models and effort
+levels come from Copilot SDK metadata, not a hardcoded copy of VS Code Chat's
+catalog. Policy-disabled models are excluded. A model without selectable
+reasoning levels uses its own behavior; this does not mean it performs no
+reasoning. Model names remain as provided by the SDK; control labels are Korean.
+The model picker recommends current high-capability (frontier) models for
+complex design discussions, with a speed/usage caveat. This is conditional
+guidance, not measured Pair-quality superiority, a required model tier, or an
+automatic change to the default model.
+
+Changes are allowed while idle and take effect on the next message in the same
+SDK conversation. Transcript, drafts, Pair persona, Driver connection and read
+permissions remain unchanged. Switching to another model selects its advertised
+default effort when available; choosing a level validates that model's support.
+The live switch is confirmed against SDK model state and tool inventory.
+An unconfirmed switch ends the conversation rather than sending with misleading
+model labels; the error explains how to recover.
+
+Picker choices persist in VS Code workspace state under
+`wellactually.pairModel`, including across new chats. If no choice has been
+stored, `wellactually.model` provides the initial model ID; the fallback is
+`claude-haiku-4.5`. Opening the view is still lazy. Opening a selector may request
+existing/interactive account access to fetch SDK metadata, but does not send a
+message to a model. After startup, inventory requests reuse the owned client.
+There is no `wellactually.language` setting; stale language settings are ignored.
 
 ## Session selection, access and lifetime
 
-Settings contain only the project and Driver connection. Choose a recent
-VS Code Copilot session by title, project and last activity. Sessions belonging
-to the current project appear first. The host reads bounded `workspace.yaml`
-metadata and file timestamps from `~/.copilot/session-state`, selecting only
-`client_name: vscode-agent-host` entries. YAML parsing uses the pinned `yaml`
-dependency. This local, version-dependent adapter does not claim support for
-every Copilot Chat provider, CLI sessions or custom session-store locations.
-Unavailable entries produce a visible warning and diagnostic codes in Output.
-Selection revalidates the metadata and a complete `session.start` header,
-without parsing subsequent events or creating a log collection.
+Settings contain only the project and Driver connection. The picker displays
+the total session count and sorts globally by last activity, without grouping
+the current project first. A session title is the primary label; the project
+name, full path, source and identity are secondary searchable details.
+
+Discovery combines three existing catalogs:
+
+- Ordinary VS Code Copilot Chat: `chat.ChatSessionStore.index` in each
+  `User/workspaceStorage/<workspace-id>/state.vscdb` and the default profile's
+  global index for empty windows. The host reads titles/timing from indexes,
+  not messages; `workspace.json` identifies each project. Records remain in
+  `chatSessions/<sessionId>.jsonl` or legacy `.json` files. Chat panel Agent mode
+  can use this storage too; it is not synonymous with agent-host.
+- The current VS Code profile's `globalStorage/agent-host.db` registrations and
+  `agentSessionData/<visible-session-id>/session.db` metadata. `customTitle` is
+  the visible session title; `defaultChatProviderData.sdkSessionId` maps it to
+  the actual Copilot records. VS Code registration activity time takes precedence
+  over metadata file modification times.
+- `workspace.yaml` in `~/.copilot/session-state` and, when configured,
+  `COPILOT_HOME/session-state`. No client-label filter or project filter applies.
+  Prefer an explicit `user_named` name or SDK summary; do not display an
+  automatically seeded first-message name as a title.
+
+The host uses `/usr/bin/sqlite3 -readonly` with fixed metadata-only queries,
+bounded output and a timeout. This uses the system reader on the supported
+macOS target, introduces no database or native dependency, and grants no SQLite
+or command tool to the Pair. It does not read chat-content or credential tables.
+YAML parsing uses the pinned `yaml` dependency. Ordinary Chat selection uses
+`@streamparser/json` only to verify record identity, including legacy snapshots
+that put the ID after requests. It does not retain a conversation tree, generate
+titles, normalize records or copy logs. Identity scanning stops after the ID
+with a 64 MiB maximum; failures remain explicit.
+
+VS Code entries replace duplicate raw SDK entries while retaining their visible
+session identity. Entries without a title say "untitled"; registered sessions
+with missing records remain visible with an unavailable status rather than
+disappearing. Corrupt/unreadable catalogs produce a warning and diagnostic codes.
+Selection rechecks the current Chat index and snapshot identity, or the SDK
+backing identity and complete `session.start` header.
+Missing or unsupported records fail explicitly without connecting another path.
+No conversation bodies are copied, parsed for titles, or collected by the host.
+This local format integration does not enumerate every remote/native chat
+provider or every installed VS Code profile.
 Connection changes and disconnects are disabled while selection and validation
 are pending, so an older selection cannot undo a successful disconnect.
 
-The Pair's read-only access is the union of two complete trees:
+The Pair's read-only access is the union of two source scopes:
 
 1. The current project root and everything inside it.
-2. The selected Driver session root and everything inside it, including
-   `events.jsonl`, metadata, plans and artifact files.
+2. The selected Driver's records and artifacts. SDK sessions authorize their
+   dedicated directory, including `events.jsonl`, metadata and files.
+   Standard Chat authorizes only its exact JSON/JSONL record and, when present,
+   `chatEditingSessions/<sessionId>`. It must not authorize the shared
+   `chatSessions` directory, workspace database or unrelated chats.
 
 Directory listings, hidden files, dependencies and arbitrary file extensions
 are authorized. There are no sensitive-filename exclusions: both trees may
 contain secrets, so share only data appropriate for the model service.
 SDK-supported formats and bounded output still apply. Native recursive search
 may omit Git metadata; explicit reads/searches of those files remain allowed.
-Symlinks are resolved within the union; links and references outside both roots
+Symlinks are resolved within the union; links and references outside both scopes
 do not grant access. Native recursive search does not follow directory symlinks.
 
 Changing the Driver revokes the old session's extra scope without resetting

@@ -3,8 +3,9 @@
 **Status:** Approved prototype contract, revised September 16, 2026.
 The user approved SDK-first simplification, removed automatic observation and
 Knowledge Compilation, and fixed the product language to Korean.
-The later September 16 access decision replaces log-file selection with recent
-VS Code session selection and authorizes two complete read-only directory trees.
+The later September 16 access decision replaces log-file selection with local
+Copilot session selection and authorizes the project and selected Driver read-only.
+Discovery now includes all compatible client labels and projects in that store.
 The approved pairing persona prioritizes shared engineering judgment rather
 than generic agent reconnaissance and exhaustive checklist answers.
 This supersedes earlier report, language-selection, log-ingestion,
@@ -46,18 +47,24 @@ that exceed the Pair role.
 
 ### Pairing behavior
 
-Answer the human's actual question and help clarify an important engineering
-judgment together. Offer a provisional view with its reason, assumptions or
-counterexample; make the tradeoff concrete when useful. Do not withhold a useful
-answer to force another exchange. General questions remain general rather than
-being interpreted as requests to restore or modify a repository feature.
+The default discussion goal is one useful contribution, not a completed answer
+or solution on every turn. The Pair may notice a case, question an assumption,
+raise a plausible concern or suggest a small check, then let the human respond.
+Do not preempt their next decision by answering every imagined follow-up.
+Carry earlier choices, objections and unresolved points into the next turn.
 
-Prioritize the consequential issue instead of exhausting every adjacent topic.
-Carry earlier choices, reasons and rejected suggestions into the next turn.
-Ask at most one focused question only when it would materially change the
-advice. Do not impose a word limit, a mandatory closing question, an interview
-or a fixed answer template; honor explicit requests for detailed explanations
-and comprehensive checklists.
+A hypothesis does not require exhaustive evidence before being mentioned.
+Label it as unverified and do not invent risks or claim checks that did not
+happen. Relevant facts remain facts, not blanket hedging. Do not turn a casual
+discussion into a source audit merely to support every tentative observation.
+
+Direct factual questions and explicit requests for explanations, comparisons,
+checklists or verification still receive the needed response within the Pair's
+role. Do not withhold answers to force interaction. Questions may stand alone
+without an explanation-first rule, but are optional and limited to one focused
+question at a time. Do not enforce a word limit, a closing question, a quiz or
+a fixed template. General discussion remains general unless the user requests
+project-specific work.
 
 Use SDK `customize` for the `identity`, `tone` and `tool_efficiency` sections
 rather than appending a Pair label to the default coding-agent identity or
@@ -78,8 +85,9 @@ human/model conversation, not merely prompt-string tests.
    A signed-in account does not necessarily authorize every extension/runtime.
 4. Discuss the engineering judgment. The Pair uses its persistent SDK session
    and reads relevant project files with SDK tools.
-5. Optionally choose a recent VS Code Copilot Driver session in settings.
-   Show its title, project and activity time, with current-project sessions first.
+5. Optionally choose a Driver from the merged local VS Code/Copilot catalog.
+   Show its actual title first and project/activity/source details second.
+   Sort globally by recent activity without current-project priority.
    Discovery reads existing metadata, not conversation bodies. Selection checks
    the session identity/header but does not ingest subsequent records.
 6. Ask the Pair to examine the Driver result. It directly reads/searches the
@@ -98,6 +106,17 @@ A missing local project is explained; remote/virtual workspaces are not claimed.
 The transcript dominates the Secondary Side Bar and the composer is pinned.
 Settings contain project information and Driver connection. Compact
 controls expose stop, end and new chat. No evidence dashboard is required.
+
+The input area follows familiar Copilot Chat placement: one rounded composer
+with a read-only Pair role marker, model/reasoning selectors and send/stop
+controls. Do not imply Agent execution, attachments or other unsupported modes.
+Use SDK model metadata and supported effort levels rather than inventing options.
+An idle model change preserves the same SDK conversation, transcript and Driver
+scope and affects the next human message. Persist choices per workspace.
+Only publish a successful live change after confirming SDK model state; report
+unsupported values or unconfirmed switches explicitly. Opening the view remains
+lazy; selecting a model can fetch authenticated metadata without model inference.
+Changing settings must preserve drafts, caret, scroll and IME behavior.
 
 The empty state uses an AI pair-programming heading and a short product
 description, not an invitation to submit questions to an agent. It has no
@@ -128,12 +147,16 @@ Memory and cross-session search remain disabled. Compaction is not guaranteed
 verbatim recall. Ending deletes only owned temporary runtime data after
 verified cleanup; arbitrary host-restart continuity is not promised.
 
-Allow read-only `view` and `grep` on exactly two complete trees: the current
-project root and the selected Driver session directory. Allow directory
+Allow read-only `view` and `grep` on the current project and selected Driver.
+For SDK sessions, authorize the entire dedicated Driver session directory.
+For standard VS Code Copilot Chat, authorize its exact original JSON/JSONL
+transcript and session-specific `chatEditingSessions/<sessionId>` tree if present.
+Never grant the shared Chat directory, workspace index or sibling conversations.
+Allow directory
 listings and all files within them, including hidden files, dependencies,
 session metadata, records and artifacts. Do not filter by filename, sensitivity
 or extension. Actual SDK format support and bounded output still apply.
-Resolve symlinks against the union of the two roots; never authorize a target
+Resolve symlinks against the union of the two scopes; never authorize a target
 outside both. Native recursive tools must not traverse external directory links.
 Search may omit Git metadata during recursive traversal; explicit file access
 remains authorized.
@@ -143,19 +166,39 @@ Changing the connection preserves the Pair conversation and revokes the old
 session's additional scope. Paths already inside the project stay readable.
 Never resume the Driver session as the Pair.
 
-The local recent-session adapter reads `workspace.yaml` metadata and file
-timestamps under `~/.copilot/session-state`, restricted to
-`client_name: vscode-agent-host`. Use the maintained YAML parser rather than a
-partial custom YAML implementation. Revalidate identity/header on selection.
-Report unreadable entries explicitly. This is a version-dependent format
-integration, not an all-provider VS Code API or general home-directory scan.
+The local adapter includes ordinary VS Code Copilot Chat indexes across all
+saved `User/workspaceStorage` directories plus empty-window chats, using the
+indexed title and timing and the original JSON/JSONL record path.
+It merges these with the current profile's `agent-host.db` registry
+and per-session title/backing metadata and the default and configured
+`COPILOT_HOME` SDK session stores. Read discovery metadata via the macOS system
+SQLite reader with fixed read-only queries; do not collect conversation bodies,
+query credential tables, or expose a command tool to the Pair.
+For ordinary Chat, use the indexed title and revalidate the selected record's
+snapshot ID. A streaming parser discards unrelated parsed values and stops at
+the identity, with a 64 MiB read limit for old JSON snapshots whose ID follows
+the requests array. Report format/limit failures explicitly, never reconstruct
+or substitute a conversation.
+For agent-host sessions, prefer VS Code's `customTitle`; map the visible ID through
+`defaultChatProviderData.sdkSessionId`, not by assuming the two IDs match.
+For SDK-only entries, use an explicit user name or summary. Never use an
+auto-seeded first message as a title. Show untitled entries as untitled.
+
+Do not filter or prioritize by project or client label. Show the total count
+and global recent-activity order. Registry entries with unavailable records
+remain visible with an explicit status. Revalidate mapping and session header
+on selection, without substituting unrelated records.
+Use the maintained YAML parser and report unreadable metadata explicitly.
+This is a version-dependent local format integration, not a universal remote
+chat API or a general home-directory scan. Do not merge arbitrary VS Code
+profiles or providers' transcript formats without separate support.
 
 Raw log interpretation belongs to the Pair, not a host event normalizer.
 Source permissions, input/output bounds and partial-output disclosure remain
 host responsibilities. File changes do not prove execution success. Driver
 assertions must not be represented as independently verified outcomes.
 
-Both authorized trees may contain sensitive material. The first-message and
+Both authorized scopes may contain sensitive material. The first-message and
 session-selection UI must make the full read scope clear, including hidden and
 sensitive files. Do not grant the parent session store or the whole home
 directory, follow unapproved external artifacts, or imply automatic secret
@@ -187,7 +230,8 @@ does not prove learning or competence.
 
 ## Verification and Non-Goals
 
-Verify lazy startup, SDK session reuse, recent VS Code session discovery,
+Verify lazy startup, SDK session reuse, whole-store Copilot session discovery
+across client labels and projects, visible unstarted sessions,
 directory and file access throughout both roots, external-link denial,
 old-session denial after reconnect, cancellation/late events, fixed Korean language,
 draft/IME behavior, safe text rendering and absence of removed controls/APIs.

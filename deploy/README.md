@@ -23,6 +23,11 @@ Marketplace publisher. There is no Marketplace publish command.
 The initial target is macOS Apple Silicon (`darwin-arm64`), VS Code 1.137.0, SDK
 1.0.13 and its bundled CLI 1.0.83 / protocol 3. Do not label the native-runtime
 VSIX universal or claim untested platform compatibility.
+Session metadata discovery also uses the macOS system `/usr/bin/sqlite3`
+utility in read-only mode. It reads the active VS Code profile's session
+registry/title metadata and workspace Chat indexes, not credentials. Ordinary
+Chat selection uses a streaming JSON identity check on the selected original
+file; it does not copy or normalize conversations.
 
 Inspect the package for compiled code, policy/persona Markdown, Webview CSS,
 and required SDK native assets. Confirm removed report and language modules

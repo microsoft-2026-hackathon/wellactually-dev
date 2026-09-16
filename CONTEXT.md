@@ -82,12 +82,15 @@ Session.
 The bounded conversational partner that surfaces assumptions, alternatives,
 counterexamples, constraints, and minimum necessary explanation. It neither
 makes the final choice nor authors or sends AI Driver instructions.
-Its pairing goal is to answer the actual question while clarifying an important
-engineering judgment together. It offers a provisional view with reasons and
-concrete examples, and carries the human's choices and objections forward.
-General questions stay general; repository inspection is not a default ritual.
-Questions are optional and should resolve a consequential uncertainty, not
-force an interview. Comprehensive explanations remain available when requested.
+In discussion, it contributes a useful observation, question, tentative concern
+or small suggested check, then returns the conversational turn to the human.
+It need not complete a solution or provide a self-contained explanation each
+time. Plausible concerns can be raised without exhaustive evidence, but remain
+clearly distinguished from verified facts. It carries the human's responses,
+choices and objections forward rather than anticipating every follow-up.
+General discussion stays general; repository inspection is not a default ritual.
+Questions are optional, not an interview. Direct answers, comprehensive
+explanations and evidence-based verification remain available when requested.
 
 **Pairing Session**:
 A voluntary, user-initiated period in which the Human Navigator asks the AI
@@ -98,8 +101,10 @@ an AI Driver connection and may end while AI Driver work continues.
 The task context, conversations, files, results, and other evidence that the
 Human Navigator allows Wellactually to use: the current project when sending
 the first Pair message, plus one Driver session selected in settings.
-The scopes are the complete project tree and the complete selected session tree,
-including hidden files, metadata, conversation records and artifacts.
+The scopes are the complete project tree and the selected session's records
+and artifacts. SDK sessions use a dedicated directory; ordinary VS Code Chat
+uses an exact transcript file and its session-specific editing directory.
+The shared parent containing unrelated chats is not included.
 No separate start or repeated workspace-consent wizard is required.
 
 **Session Focus**:
@@ -151,17 +156,38 @@ The first message starts it against the current trusted local project.
 Existing SDK or VS Code authentication is reused when available; interactive
 account access is only a fallback, not a mandatory onboarding step.
 
-The Pair has read-only access to exactly two directory trees: the current
-project root and the selected Driver session root. Directory listings and all
-files inside those roots are permitted without filename or extension exclusions.
-Paths and symlinks resolving outside both roots remain unauthorized.
+The Pair has two read-only scopes: the current project and the selected Driver.
+An SDK Driver shares its complete dedicated session directory.
+A standard VS Code Copilot Chat shares its original JSON/JSONL transcript and,
+when present, its `chatEditingSessions/<sessionId>` directory. It does not grant
+the shared `chatSessions` parent, workspace index, or sibling conversations.
+Directory listings and files within authorized trees remain permitted without
+filename exclusions. Paths and symlinks outside the authorized scope remain denied.
 Tool output limits and supported formats are not extra permission scopes.
 
-The human selects a recent VS Code Copilot session by title, project and
-activity time, not a log file. Discovery reads existing `workspace.yaml`
-metadata and file timestamps from the local `.copilot/session-state` store,
-limited to `vscode-agent-host` sessions. It is a version-dependent local adapter,
-not a universal Copilot Chat API. Selection verifies the session header;
+The human selects from a global local-session catalog by session title, project
+and activity time, not a log file or first-message preview. Discovery includes
+ordinary Copilot Chat indexes from every saved workspace under the current
+VS Code user-data root plus the default profile's empty-window Chat index.
+`chat.ChatSessionStore.index` provides titles and timing; original transcripts
+remain in `chatSessions/<sessionId>.jsonl` or legacy `.json` files.
+It also combines VS Code's profile-level `agent-host.db` registrations with Copilot records in
+`~/.copilot/session-state` and `COPILOT_HOME/session-state` when configured.
+VS Code `customTitle` and `defaultChatProviderData.sdkSessionId` metadata supply
+the displayed title and the backing SDK conversation identity. SDK records use
+an explicit user name or summary, never the automatically seeded first-message
+name. Untitled sessions are identified as such rather than summarized by a model.
+
+The list is globally newest-first with no current-project priority, client filter
+or project filter. Registered sessions whose local records are missing remain
+visible but cannot connect; stale metadata does not grant another session's
+access. Catalog failures are reported. The host reads existing SQLite metadata
+read-only using the macOS system reader, never conversation tables or credentials.
+This is a version-dependent local adapter, not an all-provider/remote chat API.
+Agent mode in an ordinary Chat panel does not imply agent-host storage.
+Selection revalidates the current index and record identity: an SDK session
+header, or a standard Chat snapshot's session ID. Legacy JSON is streamed to
+the identity without retaining a parsed conversation or creating a copy.
 the Pair then reads the original records and artifacts directly.
 The host does not watch, copy,
 normalize, correlate, or automatically react to Driver records. The human asks
@@ -183,6 +209,12 @@ The Secondary Side Bar contains the transcript and pinned composer. Settings
 contain project information and Driver connection only. Product controls,
 host messages and Pair responses use Korean; there is no language selector or
 language preference. Code, identifiers and quoted source excerpts are unchanged.
+The composer exposes model and reasoning selectors using the SDK's actual
+inventory and model-specific supported levels. An idle conversation can switch
+models without resetting its transcript or Driver connection; the next message
+uses the chosen settings. Choices are remembered per workspace. Opening the view
+does not invoke a model or fetch the catalog; opening a selector may require
+authentication for metadata access. Unsupported reasoning levels are not offered.
 The opening screen introduces AI pair programming with a product description
 and read-only project-sharing disclosure, not a persistent welcome notice or
 Driver-connection onboarding sentence.

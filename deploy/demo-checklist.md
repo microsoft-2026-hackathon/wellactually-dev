@@ -13,7 +13,18 @@ from earlier versions do not verify the current flow.
 - [ ] Check the AI pair-programming title, product description and read-only sharing disclosure, with no persistent welcome notice or Driver-onboarding sentence.
 - [ ] Send the first message without a Start or single-folder selection wizard.
 - [ ] Reuse authorized authentication; only fall back when unavailable.
-- [ ] Select a recent VS Code Driver session by title/project/time without a file dialog.
+- [ ] Open model/effort selectors without sending a model message; show actual SDK inventory and model-supported levels.
+- [ ] Change model and effort between messages while preserving discussion, Driver access and drafts.
+- [ ] Verify changes are blocked during a response and that model preferences survive a new chat/reload in the same workspace.
+- [ ] Verify an unavailable model or unconfirmed switch produces a visible error rather than a misleading selected label.
+- [ ] Search all local Copilot sessions across projects and client types by title/project/time without a file dialog.
+- [ ] Verify the displayed count covers the active VS Code registry plus SDK-only entries, with global recency rather than current-project grouping.
+- [ ] Show the actual VS Code session title, not the first message, and connect its correct backing SDK session.
+- [ ] Keep registered entries with missing local records visible and explain why they cannot connect.
+- [ ] Create a standard Copilot Chat in another project window and find its indexed title without opening that project in the Pair window.
+- [ ] Connect an ordinary Chat JSON/JSONL record and its own editing artifacts; deny sibling chats, shared record directories and workspace databases.
+- [ ] Verify both ordinary Chat and agent-host/SDK sessions appear in global recent order, without conflating Chat Agent mode with agent-host storage.
+- [ ] Show sessions without records and explain why they cannot connect yet.
 - [ ] List project directories and read hidden, dependency and ordinary files with editing/shell unavailable.
 - [ ] Read the selected session's records, metadata and artifacts directly; deny its parent and unselected siblings.
 - [ ] Follow only links resolving inside the two approved roots, with no external traversal.
@@ -26,7 +37,13 @@ from earlier versions do not verify the current flow.
 
 ## Human journey
 
-- [ ] Ask generally about compiling knowledge from agent sessions: get a useful prioritized viewpoint, not a repository scan or unsolicited feature-restoration analysis.
+Use the [Pair persona test scenarios](../docs/pair-persona-test-scenarios.md)
+for copyable Korean inputs and conversational observation criteria.
+
+- [ ] Raise the idea of compiling knowledge from agent sessions: receive a relevant observation, concern or question rather than a complete solution, repository scan or checklist.
+- [ ] Suggest using only final answers: the Pair reacts to that idea and leaves room for a response instead of preemptively designing the full extraction pipeline.
+- [ ] Raise a plausible edge case without asking for verification: the Pair can discuss it as an unverified possibility without conducting an evidence audit or inventing proof.
+- [ ] Ask a direct factual question: the Pair answers rather than withholding information to force discussion.
 - [ ] Explain that the knowledge will support future engineering decisions: the next reply uses that goal rather than asking for it again.
 - [ ] Reject a Pair suggestion: it revises the reasoning rather than defending the old suggestion or restarting a generic checklist.
 - [ ] Explicitly ask for a comprehensive checklist: the Pair supplies it instead of enforcing brevity or a one-question template.

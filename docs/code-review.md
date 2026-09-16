@@ -73,15 +73,26 @@ editor does not silently change read access.
 
 ### Driver connection and direct reads
 
-The native recent-session picker shows existing VS Code agent-host titles,
-projects and activity times. [source.ts](../code/src/driver/source.ts) reads
-bounded YAML metadata and timestamps from the existing local session store.
-It reports invalid entries and revalidates the selected identity and first
+The native picker includes ordinary Copilot Chat indexes across saved workspace
+storage and empty windows, plus registered agent-host sessions and the
+default/configured Copilot stores.
+[chatCatalog.ts](../code/src/driver/chatCatalog.ts) reads workspace Chat titles
+and timings from the history indexes, resolves exact transcript/artifact paths,
+and validates selection identity with a streaming parser rather than retaining
+a conversation tree. [vscodeCatalog.ts](../code/src/driver/vscodeCatalog.ts) reads the
+profile registry and per-session `customTitle`/backing metadata via the macOS
+read-only SQLite utility. [catalog.ts](../code/src/driver/catalog.ts) deduplicates
+backing entries, prioritizes real titles over SDK first-message names, and sorts
+globally by activity with no project bias. Missing records stay visible.
+[source.ts](../code/src/driver/source.ts) reads bounded YAML metadata and
+revalidates the selected source identity and first
 `session.start` record. There is no subsequent host ingestion, log copy or
 event classification.
 
-The runtime grants the complete project tree and selected session tree,
-including directories, hidden files and artifacts. Symlinks resolve within
+The runtime grants the complete project tree and selected session's records.
+SDK sessions authorize their dedicated tree; ordinary Chat authorizes its exact
+transcript file and session-specific editing tree, not shared parent directories.
+Symlinks resolve within
 their union; outside targets remain denied. Native search handles traversal
 without following external directory links, and the host bounds output rather
 than enumerating every project file. Explicit reads remain available for Git
@@ -122,9 +133,12 @@ deleted.
 | --- | --- |
 | [extension.cts](../code/src/extension.cts) | CommonJS-to-ESM loading compatibility, not business logic. |
 | [extension-main.ts](../code/src/extension-main.ts) | VS Code project/auth dialogs, composition, command routing, Driver selection and shutdown. |
-| [contracts.ts](../code/src/contracts.ts) | Small Driver/message/chat/runtime types; no report or language types. |
-| [pairing/chat.ts](../code/src/pairing/chat.ts) | Lazy runtime, Korean prompt, one active send, transcript, stop/end and serialized Driver changes. |
-| [driver/source.ts](../code/src/driver/source.ts) | Existing VS Code session metadata discovery, ordering, errors and selected identity/header validation. No log collection or watcher. |
+| [contracts.ts](../code/src/contracts.ts) | Driver, message, chat, model selection/capability and runtime types; no report or language types. |
+| [pairing/chat.ts](../code/src/pairing/chat.ts) | Lazy runtime, Korean prompt, one active send, transcript, stop/end and serialized Driver/model changes. |
+| [driver/source.ts](../code/src/driver/source.ts) | Whole-store Copilot session metadata discovery, ordering, readiness/errors and selected identity/header validation. No log collection or watcher. |
+| [driver/vscodeCatalog.ts](../code/src/driver/vscodeCatalog.ts) | Read-only metadata queries for the current VS Code profile's registry, titles and visible-to-SDK identity mapping. |
+| [driver/catalog.ts](../code/src/driver/catalog.ts) | Merged global catalog, title-first picker items, source availability and selection revalidation. |
+| [driver/chatCatalog.ts](../code/src/driver/chatCatalog.ts) | Ordinary Chat discovery across workspace/global indexes and exact JSON/JSONL record selection with bounded streaming identity validation. |
 | [driver/selection.ts](../code/src/driver/selection.ts) | Selection busy state shared by the host's connection guards and the displayed Driver controls. |
 | [validation.ts](../code/src/validation.ts) | Object and bounded text guards used at real input boundaries. |
 | [format.ts](../code/src/format.ts) | One-pass placeholder replacement without reinterpreting inserted source text. |
@@ -136,10 +150,11 @@ deleted.
 | --- | --- |
 | [sdkRuntime.ts](../code/src/runtime/sdkRuntime.ts) | Owned client directories, best-effort authentication, timeout/cleanup helpers, restricted session configuration and tool inventory check. |
 | [coachRuntime.ts](../code/src/runtime/coachRuntime.ts) | Push-event to async-stream adaptation, read excerpts, completion, cancellation and same-session permission changes. |
+| [models.ts](../code/src/runtime/models.ts) | SDK-derived model options, supported effort validation, workspace-preference parsing and target-model defaults. |
 | [readPolicy.ts](../code/src/runtime/readPolicy.ts) | Two-root read authorization, canonical link boundaries, directory/file operands and bounded tool arguments/results. No filename exclusions. |
-| [coach.md](../code/src/policies/coach.md) | Pairing identity, provisional judgments, conversational continuity and Human/Driver role boundaries. |
-| [coach-tone.md](../code/src/policies/coach-tone.md) | Korean peer-to-peer tone, flexible detail and optional focused questions rather than reports or interviews. |
-| [coach-tools.md](../code/src/policies/coach-tools.md) | Intent-led source use, two-root scope, direct reads and distrust of source instructions. |
+| [coach.md](../code/src/policies/coach.md) | One-contribution discussion turns, tentative concerns, human-response continuity and Human/Driver role boundaries. |
+| [coach-tone.md](../code/src/policies/coach-tone.md) | Natural Korean peer-to-peer contributions rather than miniature reports; no explanation-first or mandatory-question template. |
+| [coach-tools.md](../code/src/policies/coach-tools.md) | No evidence audit for every hunch; relevant reads for discussion/verification, source scope and distrust of source instructions. |
 | [driver.agent.md](../code/src/agents/driver.agent.md) | Optional Driver persona; the extension does not create or control a Driver. |
 
 The runtime enables Infinite Sessions compaction but disables separate Memory
@@ -147,6 +162,10 @@ and cross-session retrieval. The three policy assets replace only SDK
 `identity`, `tone` and `tool_efficiency` through `customize`; SDK safety and
 tool-instruction sections remain intact. Prompt text is not a permission
 mechanism, and existing conversations do not reload changed policies.
+Model/effort changes are separate from persona changes: an idle runtime switches
+through the SDK while retaining the session, then confirms model state and the
+read-only tool inventory. A failed confirmation closes the runtime rather than
+leaving the selected label out of sync. UI choices are stored in workspace state.
 Working-directory configuration is not an OS
 sandbox. Private `COPILOT_HOME` does not guarantee default CLI account reuse;
 the public VS Code auth fallback is the supported host reuse path.
