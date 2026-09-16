@@ -108,6 +108,8 @@ every Copilot Chat provider, CLI sessions or custom session-store locations.
 Unavailable entries produce a visible warning and diagnostic codes in Output.
 Selection revalidates the metadata and a complete `session.start` header,
 without parsing subsequent events or creating a log collection.
+Connection changes and disconnects are disabled while selection and validation
+are pending, so an older selection cannot undo a successful disconnect.
 
 The Pair's read-only access is the union of two complete trees:
 
@@ -138,6 +140,11 @@ There is no Compiler, report snapshot/cache/export or persistent recovery.
 Old user-exported reports, Driver logs and earlier-version retained snapshots
 are not deleted. Owned temporary runtime data is removed after verified
 cleanup; cleanup errors remain visible.
+If a response failure closes the runtime, the chat ends instead of accepting
+messages on that closed runtime. Verified client shutdown permits fresh-chat
+cleanup without retrying RPCs on a stopped client. Unverified cleanup remains
+an error, with guidance to retry a new chat or reload the window after checking
+ongoing work.
 
 ## Verification boundaries
 
@@ -147,3 +154,6 @@ do not prove conversational quality, model-driven retrieval or compaction recall
 The [demo checklist](../deploy/demo-checklist.md) separates
 technical checks from a human/model journey. Record each observed outcome
 separately; synthetic checks do not verify the live-model journey.
+Path checks are preflight checks, not an atomic OS sandbox against concurrent
+path replacement. Hardening that boundary remains deferred; use trusted,
+synthetic data for prototype demos.

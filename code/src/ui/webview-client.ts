@@ -114,6 +114,18 @@ export class QuestionDraft {
 }
 
 export interface WebviewApi { postMessage(command: ViewCommand): void }
+
+export function driverControlState(state: ViewState | null, working: boolean): {
+  disabled: boolean;
+  message: UiMessage | null;
+} {
+  if (!state) return { disabled: true, message: null };
+  if (state.chat.status === "ended") return { disabled: true, message: "closedComposer" };
+  if (state.selectingDriver) return { disabled: true, message: "selectingDriver" };
+  if (working) return { disabled: true, message: "busyComposer" };
+  return { disabled: false, message: null };
+}
+
 /** VS Code가 웹뷰 실행 환경에 제공하는 호스트 통신 API를 얻는다. */
 declare function acquireVsCodeApi(): WebviewApi;
 
@@ -262,6 +274,7 @@ export function mountCoachView(doc: Document, api: WebviewApi): { receive(event:
   function renderControls(): void {
     const ended = state?.chat.status === "ended";
     const working = !!state?.starting || state?.chat.status === "working" || !!replies.reply || draft.waiting;
+    const driverControls = driverControlState(state, working);
     question.disabled = !state || ended;
     element<HTMLButtonElement>("send-question").disabled = !state || ended || working;
     visible("stop-reply", !ended && working);
@@ -289,12 +302,12 @@ export function mountCoachView(doc: Document, api: WebviewApi): { receive(event:
           break;
         case "selectDriver":
         case "disconnectDriver":
-          button.disabled = !state || ended || working;
+          button.disabled = driverControls.disabled;
           break;
       }
     }
-    text("driver-availability", ended ? t("closedComposer") : working ? t("busyComposer") : "");
-    visible("driver-availability", !!ended || working);
+    text("driver-availability", driverControls.message ? t(driverControls.message) : "");
+    visible("driver-availability", driverControls.message !== null);
     updateJumpPosition();
   }
   /** 확정된 대화 기록과 프로젝트·드라이버 연결 정보, 호스트 안내 문구를 화면에 반영한다. */

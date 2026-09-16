@@ -7,6 +7,7 @@ import { createChat } from "../src/pairing/chat.js";
 import { parseChatMessage } from "../src/ui/chatMessage.js";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 class FakeSession implements RuntimeSession {
   sessionId = "own-coach-session";
@@ -62,6 +63,73 @@ test("one Pair streams text and bounded source excerpts without replaying its fi
   assert.equal(session.listeners.size, 0);
   await runtime.close();
   assert.equal(cleanup, 1);
+});
+
+test("grep provenance names the actual Driver operands for both single and multiple paths", async () => {
+  const directory = await mkdtemp(path.resolve(".source-provenance-"));
+  try {
+    const root = path.join(directory, "project");
+    const driver = path.join(directory, "driver");
+    await mkdir(root);
+    await mkdir(driver);
+    const log = path.join(driver, "events.jsonl");
+    const artifact = path.join(driver, "artifact.md");
+    await writeFile(log, "{}");
+    await writeFile(artifact, "Synthetic artifact");
+    const policy = await createReadPolicy(root);
+    await policy.setDriver({ directory: driver, sessionId: "driver", title: "Driver" });
+    for (const paths of [[log], [log, artifact]]) {
+      const session = new FakeSession();
+      session.onSend = () => {
+        session.emit("tool.execution_start", {
+          toolCallId: "search", toolName: "grep", arguments: { pattern: ".", paths },
+        });
+        session.emit("tool.execution_complete", {
+          toolCallId: "search", success: true, result: { content: "Synthetic search result" },
+        });
+        session.finish();
+      };
+      const runtime = attachCoachRuntime(session, policy, async () => {});
+      try {
+        const sources: string[] = [];
+        for await (const delta of runtime.stream("Review the Driver", new AbortController().signal)) {
+          if (delta.kind === "source") {
+            sources.push(delta.message.source!);
+            assert.equal(delta.message.partial, true);
+          }
+        }
+        assert.deepEqual(sources, [`grep: ${paths.map(file => pathToFileURL(file).href).join(", ")}`]);
+      } finally { await runtime.close(); }
+    }
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
+
+test("fatal cancellation ends the chat and verified client shutdown permits fresh-chat cleanup", async () => {
+  const session = new FakeSession();
+  let stops = 0;
+  session.onSend = () => session.emit("assistant.message_delta", { messageId: "partial", deltaContent: "Partial" });
+  session.onAbort = () => { throw new Error("Synthetic abort failure"); };
+  session.disconnect = async () => {
+    session.disconnected++;
+    if (stops) throw new Error("RPC is unavailable after client shutdown");
+  };
+  const runtime = attachCoachRuntime(session, await createReadPolicy(path.resolve("test/fixtures/workspace")),
+    async () => { stops++; });
+  const chat = createChat({ async createRuntime() { return runtime; }, publish() {}, emit() {} });
+  const request = chat.submit("First message");
+  try {
+    await new Promise(resolve => setImmediate(resolve));
+    await assert.rejects(chat.stop(), /COACH_SETTLE_FAILED/);
+    await request;
+    assert.equal(chat.getState().status, "ended");
+    assert.equal(chat.getState().messages.at(-1)?.partial, true);
+    await assert.rejects(chat.submit("Do not reuse the closed runtime"), /CHAT_ENDED/);
+    await chat.end();
+    assert.equal(session.disconnected, 0);
+    assert.equal(stops, 1);
+  } finally {
+    if (!stops) await runtime.close();
+  }
 });
 
 test("distinct assistant messages stay separate in live text and the saved reply across tool turns", async () => {

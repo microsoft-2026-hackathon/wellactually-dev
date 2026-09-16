@@ -7,7 +7,7 @@ test("the first question starts one Pair and subsequent questions reuse its cont
   let starts = 0;
   const prompts: string[] = [];
   const runtime: CoachRuntime = {
-    sessionId: "coach",
+    sessionId: "coach", closed: false,
     async *stream(prompt) { prompts.push(prompt); yield { kind: "text", text: "A useful explanation." }; },
     async setDriver() {}, async cancel() {}, async close() {},
   };
@@ -39,7 +39,7 @@ test("stopping during startup never sends the question and ending closes the eve
   const ending = chat.end();
   assert.equal(chat.getState().status, "ended");
   ready({
-    sessionId: "coach", async *stream() { sent++; },
+    sessionId: "coach", closed: false, async *stream() { sent++; },
     async setDriver() {}, async cancel() {}, async close() { closed++; },
   });
   await ending;
@@ -55,7 +55,7 @@ test("a partial reply is retained, late text is excluded, and every question req
   const pending = new Promise<void>(resolve => { release = resolve; });
   const prompts: string[] = [];
   const runtime: CoachRuntime = {
-    sessionId: "coach",
+    sessionId: "coach", closed: false,
     async *stream(prompt) {
       prompts.push(prompt);
       yield { kind: "text", text: "First part" };
@@ -84,7 +84,7 @@ test("a partial reply is retained, late text is excluded, and every question req
 test("runtime and cleanup failures stay visible and retrying end can finish cleanup", async () => {
   let closes = 0;
   const runtime: CoachRuntime = {
-    sessionId: "coach", async *stream() { throw new Error("MODEL_FAILED"); },
+    sessionId: "coach", closed: false, async *stream() { throw new Error("MODEL_FAILED"); },
     async setDriver() {}, async cancel() {},
     async close() { if (++closes === 1) throw new Error("CLEANUP_FAILED"); },
   };
@@ -96,11 +96,34 @@ test("runtime and cleanup failures stay visible and retrying end can finish clea
   assert.equal(closes, 2);
 });
 
+test("a closed runtime ends the chat instead of accepting another doomed message", async () => {
+  let closed = false;
+  let sends = 0;
+  const runtime: CoachRuntime = {
+    sessionId: "coach",
+    get closed() { return closed; },
+    async *stream() {
+      sends++;
+      closed = true;
+      throw new Error("COACH_CLEANUP_FAILED");
+    },
+    async setDriver() {}, async cancel() {},
+    async close() { throw new Error("COACH_CLEANUP_FAILED"); },
+  };
+  const chat = createChat({ async createRuntime() { return runtime; }, publish() {}, emit() {} });
+  await assert.rejects(chat.submit("First message"), /COACH_CLEANUP_FAILED/);
+  assert.equal(chat.getState().status, "ended");
+  await assert.rejects(chat.submit("Retry"), /CHAT_ENDED/);
+  await assert.rejects(chat.setDriver(null), /CHAT_ENDED/);
+  await assert.rejects(chat.end(), /COACH_CLEANUP_FAILED/);
+  assert.equal(sends, 1);
+});
+
 test("connecting or disconnecting a Driver never sends an automatic message", async () => {
   let sends = 0;
   const selections: (string | null)[] = [];
   const runtime: CoachRuntime = {
-    sessionId: "coach", async *stream() { sends++; yield { kind: "text", text: "Ready." }; },
+    sessionId: "coach", closed: false, async *stream() { sends++; yield { kind: "text", text: "Ready." }; },
     async setDriver(driver) { selections.push(driver?.sessionId ?? null); },
     async cancel() {}, async close() {},
   };
@@ -119,7 +142,7 @@ test("a pending Driver permission update cannot overlap a question or owned shut
   const changed = new Promise<void>(resolve => { release = resolve; });
   const order: string[] = [];
   const runtime: CoachRuntime = {
-    sessionId: "coach", async *stream() { yield { kind: "text", text: "Hello" }; },
+    sessionId: "coach", closed: false, async *stream() { yield { kind: "text", text: "Hello" }; },
     async setDriver() { await changed; order.push("changed"); },
     async cancel() {}, async close() { order.push("closed"); },
   };

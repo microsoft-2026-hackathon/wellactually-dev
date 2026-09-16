@@ -22,6 +22,7 @@ export interface ViewState {
   workspaceLabel: string;
   notice: string;
   starting: boolean;
+  selectingDriver: boolean;
 }
 
 export type ViewEvent =

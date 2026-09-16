@@ -19,6 +19,7 @@ export const uiMessages = {
   roleHuman: "사용자", roleCoach: "페어", sourceRead: "읽은 자료: {source}", toolSource: "도구 출력",
   partialSource: "일부 발췌", partialReply: "일부 응답",
   driverTitle: "드라이버 연결", noDriver: "선택한 드라이버 세션이 없습니다.",
+  selectingDriver: "드라이버 세션 선택이 끝날 때까지 연결 변경이나 해제를 기다려 주세요.",
   selectDriver: "드라이버 세션 선택", changeDriver: "드라이버 세션 변경", disconnectDriver: "연결 해제",
   driverSession: "세션: {sessionId}",
   settingsConnectionHelp: "선택한 세션 폴더의 기록, 메타데이터, 파일 전체를 읽기 전용으로 공유합니다. 원본을 복사하거나 감시하지 않습니다. 민감한 파일도 자동 제외되지 않습니다.",

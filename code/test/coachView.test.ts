@@ -1,14 +1,24 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createReplyState, QuestionDraft, reduceReply } from "../src/ui/webview-client.js";
+import { createReplyState, driverControlState, QuestionDraft, reduceReply } from "../src/ui/webview-client.js";
 import type { ViewState } from "../src/ui/messages.js";
 
 function view(overrides: Partial<ViewState> = {}): ViewState {
   return {
     type: "state", chat: { id: "chat-1", status: "idle", messages: [] },
-    driver: null, workspaceLabel: "/project", notice: "", starting: false, ...overrides,
+    driver: null, workspaceLabel: "/project", notice: "", starting: false, selectingDriver: false, ...overrides,
   };
 }
+
+test("Driver controls remain disabled throughout selection and recover afterward", () => {
+  assert.deepEqual(driverControlState(null, false), { disabled: true, message: null });
+  assert.deepEqual(driverControlState(view(), false), { disabled: false, message: null });
+  assert.deepEqual(driverControlState(view({ selectingDriver: true }), false),
+    { disabled: true, message: "selectingDriver" });
+  assert.deepEqual(driverControlState(view(), true), { disabled: true, message: "busyComposer" });
+  assert.deepEqual(driverControlState(view({ chat: { id: "chat-1", status: "ended", messages: [] } }), false),
+    { disabled: true, message: "closedComposer" });
+});
 
 test("a requested reply preserves original text through ordinary state updates", () => {
   let state = reduceReply(createReplyState(), view());

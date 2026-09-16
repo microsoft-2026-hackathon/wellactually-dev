@@ -15,6 +15,7 @@ const messages = {
   ended: "대화를 종료했습니다. 드라이버는 계속 작업할 수 있습니다. 새 대화에서 논의를 시작하세요.",
   workspaceChanged: "열린 프로젝트가 바뀌었습니다. 현재 프로젝트를 사용하려면 새 대화를 시작하세요.",
   failed: "작업을 완료하지 못했습니다: {code}. 드라이버에는 영향이 없습니다.",
+  cleanupFailed: "실행 자원 정리를 확인하지 못했습니다 ({code}). 새 대화를 다시 시도하고, 계속 실패하면 진행 중인 작업을 확인한 뒤 VS Code 창을 다시 로드하세요.",
 } as const;
 
 export type HostMessage = keyof typeof messages;
@@ -22,4 +23,8 @@ export type HostMessage = keyof typeof messages;
 /** 호스트 알림 문구의 자리표시자를 전달된 값으로 치환하며, 필요한 값이 없으면 오류를 발생시킨다. */
 export function hostText(key: HostMessage, values?: MessageValues): string {
   return formatMessage(messages[key], values);
+}
+
+export function hostFailureText(code: string): string {
+  return hostText(code === "COACH_CLEANUP_FAILED" ? "cleanupFailed" : "failed", { code });
 }

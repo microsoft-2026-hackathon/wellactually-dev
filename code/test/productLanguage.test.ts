@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { formatMessage } from "../src/format.js";
 import { record } from "../src/validation.js";
-import { hostText } from "../src/hostMessages.js";
+import { hostFailureText, hostText } from "../src/hostMessages.js";
 import { uiMessages } from "../src/ui/strings.js";
 
 test("the assistant is Pair in English and Korean without renaming Wellactually or stable view IDs", () => {
@@ -51,4 +51,13 @@ test("formatting preserves inserted source text without interpreting its placeho
   assert.equal(formatMessage("{count}: {text}", { count: 2, text: "<code>{unchanged}</code>" }),
     "2: <code>{unchanged}</code>");
   assert.throws(() => formatMessage("{missing}"), /MISSING_TRANSLATION_ARGUMENT/);
+});
+
+test("unverified cleanup gives explicit recovery guidance without hiding its failure code", () => {
+  const message = hostFailureText("COACH_CLEANUP_FAILED");
+  assert.match(message, /COACH_CLEANUP_FAILED/);
+  assert.match(message, /새 대화/);
+  assert.match(message, /진행 중인 작업을 확인/);
+  assert.match(message, /창을 다시 로드/);
+  assert.equal(hostFailureText("OTHER_FAILED"), hostText("failed", { code: "OTHER_FAILED" }));
 });

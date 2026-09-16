@@ -96,8 +96,14 @@ export function attachCoachRuntime(
 ): CoachRuntime {
   let activeTurn: ActiveTurn | undefined;
   let isClosed = false;
+  let clientStopped = false;
   let isChangingDriver = false;
   let closeTask: Promise<void> | undefined;
+
+  async function stopOwnedResources(): Promise<void> {
+    await stopOwnedClient();
+    clientStopped = true;
+  }
 
   /** 중복 취소를 합치고 실제 유휴 상태까지 기다리며, 정체되면 소유 클라이언트를 종료한다. */
   async function cancelAndSettle(deadlineMs: number): Promise<void> {
@@ -119,7 +125,7 @@ export function attachCoachRuntime(
       isClosed = true;
       let code = "COACH_SETTLE_FAILED";
       try {
-        await within(stopOwnedClient(), 14_000, "COACH_STOP_TIMEOUT");
+        await within(stopOwnedResources(), 14_000, "COACH_STOP_TIMEOUT");
       } catch {
         code = "COACH_CLEANUP_FAILED";
       }
@@ -145,15 +151,18 @@ export function attachCoachRuntime(
       } catch (error) {
         failure = error;
       }
-      try {
-        await within(session.disconnect(), 3_000, "COACH_DISCONNECT_TIMEOUT");
-      } catch (error) {
-        failure ??= error;
-      }
-      try {
-        await within(stopOwnedClient(), 14_000, "COACH_STOP_TIMEOUT");
-      } catch (error) {
-        failure = error;
+      // A verified client shutdown already released the session; its RPC is no longer usable.
+      if (!clientStopped) {
+        try {
+          await within(session.disconnect(), 3_000, "COACH_DISCONNECT_TIMEOUT");
+        } catch (error) {
+          failure ??= error;
+        }
+        try {
+          await within(stopOwnedResources(), 14_000, "COACH_STOP_TIMEOUT");
+        } catch (error) {
+          failure = error;
+        }
       }
 
       turn?.fail(new Error("COACH_CLOSED"));
@@ -249,9 +258,9 @@ export function attachCoachRuntime(
       const excerpt = boundedToolText(content);
       if (!excerpt.text.trim()) return;
 
-      const source = sourceFiles.length === 1
-        ? pathToFileURL(sourceFiles[0]!).href
-        : `grep: ${pathToFileURL(policy.root).href}`;
+      const source = read.name === "grep"
+        ? `grep: ${sourceFiles.map(file => pathToFileURL(file).href).join(", ")}`
+        : pathToFileURL(sourceFiles[0]!).href;
       enqueueDelta({
         kind: "source",
         message: {
@@ -404,6 +413,7 @@ export function attachCoachRuntime(
 
   return {
     sessionId: session.sessionId,
+    get closed() { return isClosed; },
     stream,
     /** 현재 턴의 취소와 실제 작업 종료를 최대 3초 동안 기다린다. */
     cancel: () => cancelAndSettle(3_000),

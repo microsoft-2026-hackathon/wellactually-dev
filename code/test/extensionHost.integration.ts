@@ -11,6 +11,7 @@ export async function run(): Promise<void> {
   const state = api.getState();
   assert.equal(state.chat.status, "idle");
   assert.equal(state.starting, false);
+  assert.equal(state.selectingDriver, false);
   assert.equal(state.chat.messages.length, 0);
   assert.equal("report" in state, false);
   assert.equal("language" in state, false);

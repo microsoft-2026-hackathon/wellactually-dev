@@ -78,6 +78,9 @@ Driver connection. Close it with Escape or its close button.
 4. Send instructions yourself in the existing Driver UI.
 5. Ask the Pair to review the results against the criteria you discussed.
 
+Connection changes and disconnects are temporarily disabled while a session
+selection is pending. The settings view shows when that operation is in progress.
+
 The Pair can read the entire selected session directory: conversation records,
 metadata, plans, artifacts and hidden files. There is no watcher, background
 message, copied log collection or instruction-confirmation step. The two allowed
@@ -95,6 +98,8 @@ the SDK. Native recursive search can skip Git metadata; explicit file reads
 remain available. Disconnecting removes the session's additional read scope,
 but project access and already-discussed excerpts remain. New chat resets the
 Driver selection, and extension reload does not restore it.
+Search excerpts are labeled with `grep` and the actual searched paths, including
+paths in the selected Driver session. A search excerpt is not a complete file read.
 
 ## Removed features and lifetime
 
@@ -109,6 +114,10 @@ restore it. Driver logs remain user-owned and are never deleted.
 If authentication or a read fails, inspect the visible error and project/session
 selection. Do not grant access to the whole home directory or copy private
 credential stores to bypass the supported flow.
+If the Pair runtime closes after a response failure, the chat ends so you can
+start a new conversation instead of repeatedly sending to a closed session.
+If cleanup cannot be verified, follow the visible recovery guidance; check
+ongoing work before reloading the VS Code window.
 
 See [development instructions](../code/README.md) and the
 [code reading guide](code-review.md). Tests and conversation activity do not

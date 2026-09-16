@@ -118,6 +118,7 @@ export function createChat(options: ChatOptions) {
             ...(!isComplete ? { partial: true } : {}),
           });
         }
+        if (runtime?.closed) isEnded = true;
         activeRequest = undefined;
         options.emit(requestId, "end");
         publish();

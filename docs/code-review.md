@@ -101,6 +101,9 @@ Reading a Driver claim of success is not independent execution verification.
 The SDK pushes events. The adapter converts them to an async iterator of text,
 tool activity and bounded read excerpts. It avoids displaying both streamed
 text and the SDK's repeated final message.
+Every search excerpt is labeled with its actual search operands rather than
+assuming the project root. A closed runtime makes its chat terminal; successful
+client shutdown is remembered so fresh-chat cleanup does not call a stopped RPC.
 
 The host accepts one request at a time. Stop aborts it and awaits idle; an abort
 acknowledgement alone does not prove model/tool work has settled. End prevents
@@ -122,6 +125,7 @@ deleted.
 | [contracts.ts](../code/src/contracts.ts) | Small Driver/message/chat/runtime types; no report or language types. |
 | [pairing/chat.ts](../code/src/pairing/chat.ts) | Lazy runtime, Korean prompt, one active send, transcript, stop/end and serialized Driver changes. |
 | [driver/source.ts](../code/src/driver/source.ts) | Existing VS Code session metadata discovery, ordering, errors and selected identity/header validation. No log collection or watcher. |
+| [driver/selection.ts](../code/src/driver/selection.ts) | Selection busy state shared by the host's connection guards and the displayed Driver controls. |
 | [validation.ts](../code/src/validation.ts) | Object and bounded text guards used at real input boundaries. |
 | [format.ts](../code/src/format.ts) | One-pass placeholder replacement without reinterpreting inserted source text. |
 | [hostMessages.ts](../code/src/hostMessages.ts) | Fixed Korean host notifications and dialog text. |

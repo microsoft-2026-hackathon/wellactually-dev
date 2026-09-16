@@ -5,10 +5,11 @@ import path from "node:path";
 import type { DriverSource } from "./contracts.js";
 import { createChat } from "./pairing/chat.js";
 import { inspectDriverSession, listDriverSessions } from "./driver/source.js";
+import { createDriverSelection } from "./driver/selection.js";
 import { createCoachRuntime } from "./runtime/coachRuntime.js";
 import { CoachViewProvider } from "./ui/coachView.js";
 import type { ViewCommand, ViewState } from "./ui/messages.js";
-import { hostText, type HostMessage } from "./hostMessages.js";
+import { hostFailureText, hostText, type HostMessage } from "./hostMessages.js";
 
 export interface ExtensionApi {
   /** 현재 대화와 연결 정보를 웹뷰 상태 형식으로 조회한다. */
@@ -32,7 +33,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
   let isDisposed = false;
   let notice: HostMessage | null = null;
   let newChatTask: Promise<void> | undefined;
-  let isSelectingDriver = false;
+  const driverSelection = createDriverSelection(publishState);
 
   /** Read the model for a new Pair runtime, leaving an empty value to the runtime default. */
   function getConfiguredModel(): string {
@@ -141,6 +142,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
       workspaceLabel: workspacePath || openProjectNames || hostText("noWorkspace"),
       notice: notice === null ? "" : hostText(notice),
       starting: isStarting,
+      selectingDriver: driverSelection.active,
     };
   }
 
@@ -158,7 +160,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
     provider.post({
       type: "error",
       ...(requestId ? { requestId } : {}),
-      message: hostText("failed", { code }),
+      message: hostFailureText(code),
     });
     publishState();
   }
@@ -190,14 +192,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
   }
 
   async function selectDriver(): Promise<void> {
-    if (isSelectingDriver || chat.getState().status !== "idle") throw new Error("CHAT_BUSY");
+    if (chat.getState().status !== "idle") throw new Error("CHAT_BUSY");
     if (!vscode.workspace.isTrusted || vscode.env.remoteName) {
       throw new Error("TRUSTED_LOCAL_WORKSPACE_REQUIRED");
     }
 
     const targetChat = chat;
-    isSelectingDriver = true;
-    try {
+    await driverSelection.run(async () => {
       const project = workspacePath || await chooseProjectDirectory();
       if (targetChat !== chat) throw new Error("WRONG_CHAT_ID");
       workspacePath = project;
@@ -235,13 +236,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
       selectedDriver = source;
       notice = "driverConnected";
       publishState();
-    } finally {
-      isSelectingDriver = false;
-    }
+    });
   }
 
   /** Revoke the selected session tree before updating the displayed connection. */
   async function disconnectDriver(): Promise<void> {
+    driverSelection.assertIdle();
     const targetChat = chat;
     await targetChat.setDriver(null);
     if (targetChat !== chat || targetChat.getState().status === "ended") {

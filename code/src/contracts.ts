@@ -20,6 +20,7 @@ export type CoachDelta =
 
 export interface CoachRuntime {
   readonly sessionId: string;
+  readonly closed: boolean;
   /** 새 질문에 대한 응답 조각과 도구 활동, 읽은 자료를 순차적으로 전달한다. */
   stream(prompt: string, signal: AbortSignal): AsyncIterable<CoachDelta>;
   /** Replace or revoke the selected Driver session tree without resetting the conversation. */
