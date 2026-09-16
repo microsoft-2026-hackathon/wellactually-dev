@@ -18,7 +18,7 @@ export interface VscodeCatalogPaths {
 export interface VscodeSession {
   id: string;
   provider: string;
-  sdkSessionId: string;
+  sdkSessionId?: string;
   title?: string;
   workspace?: string;
   modifiedTime: number;
@@ -85,7 +85,7 @@ export async function readVscodeCatalog(paths: VscodeCatalogPaths): Promise<{
       if (typeof modifiedTime !== "number" || !Number.isFinite(modifiedTime) || modifiedTime < 0) {
         throw new Error("DRIVER_CATALOG_INVALID");
       }
-      const session: VscodeSession = { id, provider, sdkSessionId: id, modifiedTime };
+      const session: VscodeSession = { id, provider, modifiedTime };
       try {
         const metadata = new Map((await queryMetadata(path.join(paths.sessionData, id, "session.db"),
           "SELECT key, value FROM session_metadata WHERE key IN ('customTitle', 'defaultChatProviderData', 'copilot.workingDirectory')"

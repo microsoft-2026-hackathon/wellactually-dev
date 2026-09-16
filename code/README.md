@@ -162,7 +162,9 @@ titles, normalize records or copy logs. Identity scanning stops after the ID
 with a 64 MiB maximum; failures remain explicit.
 
 VS Code entries replace duplicate raw SDK entries while retaining their visible
-session identity. Entries without a title say "untitled"; registered sessions
+session identity only when the backing mapping is known. Missing mappings leave
+the VS Code entry unavailable and any standalone SDK record separate.
+Entries without a title say "untitled"; registered sessions
 with missing records remain visible with an unavailable status rather than
 disappearing. Corrupt/unreadable catalogs produce a warning and diagnostic codes.
 Selection rechecks the current Chat index and snapshot identity, or the SDK
@@ -182,6 +184,9 @@ The Pair's read-only access is the union of two source scopes:
    Standard Chat authorizes only its exact JSON/JSONL record and, when present,
    `chatEditingSessions/<sessionId>`. It must not authorize the shared
    `chatSessions` directory, workspace database or unrelated chats.
+   Empty-window records are global while editing artifacts remain in workspace
+   storage; resolve the selected session's unique editing directory separately.
+   Ambiguous matches fail explicitly instead of choosing an arbitrary directory.
 
 Directory listings, hidden files, dependencies and arbitrary file extensions
 are authorized. There are no sensitive-filename exclusions: both trees may

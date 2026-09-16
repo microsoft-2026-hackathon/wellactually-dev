@@ -101,6 +101,28 @@ test("catalog title changes are read fresh and changed backing identities are no
   } finally { await rm(f.directory, { recursive: true, force: true }); }
 });
 
+test("a VS Code registration without a backing mapping cannot absorb or connect a same-ID SDK record", async () => {
+  const f = await fixture();
+  try {
+    await f.local("same-id", "/project", 100, { summary: "Independent SDK session" });
+    const file = await f.registered("same-id", "same-id", "Visible VS Code session", 200);
+    const before = await listDriverCatalog(f.stores, f.vscode);
+    sql(file, "DELETE FROM session_metadata WHERE key='defaultChatProviderData';");
+    const result = await listDriverCatalog(f.stores, f.vscode);
+    const registered = result.sessions.find(item => item.origin === "vscode")!;
+    const standalone = result.sessions.find(item => item.origin === "copilot")!;
+    assert.equal(result.sessions.length, 2);
+    assert.equal(registered.title, "Visible VS Code session");
+    assert.equal(registered.unavailable, true);
+    assert.equal(registered.hasEvents, false);
+    assert.equal(standalone.title, "Independent SDK session");
+    assert.equal(standalone.hasEvents, true);
+    await assert.rejects(inspectCatalogSession(registered, f.vscode), /DRIVER_SESSION_SOURCE_UNAVAILABLE/);
+    await assert.rejects(inspectCatalogSession(before.sessions[0]!, f.vscode), /DRIVER_SESSION_CHANGED/);
+    assert.equal((await inspectCatalogSession(standalone, f.vscode)).sessionId, "same-id");
+  } finally { await rm(f.directory, { recursive: true, force: true }); }
+});
+
 test("distinct visible sessions sharing a backing source are not dropped and blank titles are not errors", async () => {
   const f = await fixture();
   try {

@@ -7,6 +7,7 @@ import { pathToFileURL } from "node:url";
 import { inspectChatSession, readChatIndex, readWorkspaceChats, type ChatCatalogLocation } from "../src/driver/chatCatalog.js";
 import { driverPickerItem, inspectCatalogSession, listDriverCatalog } from "../src/driver/catalog.js";
 import type { VscodeCatalogPaths } from "../src/driver/vscodeCatalog.js";
+import { createReadPolicy } from "../src/runtime/readPolicy.js";
 
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 function sql(file: string, command: string) {
@@ -99,6 +100,42 @@ test("new conversations and renamed titles appear on the next catalog read and d
     assert.equal((await inspectChatSession(entry)).title, "Renamed title");
     f.index(location, {});
     await assert.rejects(inspectChatSession(entry), /DRIVER_SESSION_SOURCE_UNAVAILABLE/);
+  } finally { await rm(f.directory, { recursive: true, force: true }); }
+});
+
+test("empty-window Chat binds editing artifacts from its separate workspace storage without granting siblings", async () => {
+  const f = await fixture();
+  try {
+    const global = await f.workspace("global", undefined);
+    f.index(global, { standalone: f.entry("standalone", "Standalone", 10) });
+    const file = await f.transcript(global, "standalone");
+    const editing = path.join(f.paths.workspaceStorage, "empty-window-id", "chatEditingSessions");
+    const artifacts = path.join(editing, "standalone");
+    const sibling = path.join(editing, "another-session");
+    await mkdir(artifacts, { recursive: true });
+    await mkdir(sibling);
+    await writeFile(path.join(artifacts, "state.json"), '{"synthetic":true}');
+    const catalog = await listDriverCatalog([path.join(f.directory, "sdk")], f.paths);
+    assert.deepEqual(catalog.failures, []);
+    const selected = await inspectCatalogSession(catalog.sessions[0]!, f.paths);
+    assert.deepEqual(selected, {
+      kind: "vscode-chat", file, sessionId: "standalone", title: "Standalone", artifactsDirectory: artifacts,
+    });
+    const project = path.join(f.directory, "project");
+    await mkdir(project);
+    const policy = await createReadPolicy(project);
+    await policy.setDriver(selected);
+    assert.deepEqual(await policy.sourceFiles("view", { path: path.join(artifacts, "state.json") }),
+      [path.join(artifacts, "state.json")]);
+    for (const target of [editing, sibling, f.paths.workspaceStorage, path.dirname(file)]) {
+      await assert.rejects(policy.sourceFiles("view", { path: target }), /READ_PATH_DENIED/);
+    }
+    await policy.setDriver(null);
+    await assert.rejects(policy.sourceFiles("view", { path: artifacts }), /READ_PATH_DENIED/);
+    const duplicate = path.join(f.paths.workspaceStorage, "other-window-id", "chatEditingSessions", "standalone");
+    await mkdir(duplicate, { recursive: true });
+    const refreshed = await listDriverCatalog([path.join(f.directory, "sdk")], f.paths);
+    await assert.rejects(inspectCatalogSession(refreshed.sessions[0]!, f.paths), /DRIVER_CHAT_ARTIFACTS_AMBIGUOUS/);
   } finally { await rm(f.directory, { recursive: true, force: true }); }
 });
 

@@ -15,6 +15,7 @@ export interface ChatCatalogLocation {
   storageDirectory: string;
   recordsDirectory: string;
   workspace: string;
+  editingStorageDirectories?: readonly string[];
 }
 
 export interface VscodeChatSession {
@@ -153,6 +154,8 @@ export async function readWorkspaceChats(paths: VscodeCatalogPaths): Promise<{
       failures.push({ sessionId: "VS Code Chat", code: "DRIVER_CHAT_STORAGE_FAILED" });
     }
   }
+  // Empty-window transcripts are global, but VS Code still stores their edits under workspace storage.
+  locations[0]!.editingStorageDirectories = locations.slice(1).map(location => location.storageDirectory);
   let next = 0;
   // Read independent workspace indexes with bounded concurrency, not hundreds of SQLite children at once.
   await Promise.all(Array.from({ length: Math.min(4, locations.length) }, async () => {
@@ -226,16 +229,19 @@ export async function inspectChatSession(session: VscodeChatSession): Promise<Vs
   if (!current.hasEvents) throw new Error("DRIVER_SESSION_NOT_READY");
   if (session.file && current.file !== session.file) throw new Error("DRIVER_SESSION_CHANGED");
   await verifyChatIdentity(current.file, current.sessionId);
-  const artifacts = path.join(session.location.storageDirectory, "chatEditingSessions", session.sessionId);
   let artifactsDirectory: string | undefined;
-  try {
-    const stat = await lstat(artifacts);
-    if (!stat.isDirectory() || stat.isSymbolicLink() || await realpath(artifacts) !== artifacts) {
-      throw new Error("DRIVER_CHAT_PATH_INVALID");
+  for (const directory of session.location.editingStorageDirectories ?? [session.location.storageDirectory]) {
+    const artifacts = path.join(directory, "chatEditingSessions", session.sessionId);
+    try {
+      const stat = await lstat(artifacts);
+      if (!stat.isDirectory() || stat.isSymbolicLink() || await realpath(artifacts) !== artifacts) {
+        throw new Error("DRIVER_CHAT_PATH_INVALID");
+      }
+      if (artifactsDirectory) throw new Error("DRIVER_CHAT_ARTIFACTS_AMBIGUOUS");
+      artifactsDirectory = artifacts;
+    } catch (error) {
+      if (!isRecord(error) || error.code !== "ENOENT") throw error;
     }
-    artifactsDirectory = artifacts;
-  } catch (error) {
-    if (!isRecord(error) || error.code !== "ENOENT") throw error;
   }
   return {
     kind: "vscode-chat", file: current.file, sessionId: current.sessionId, title: current.title,

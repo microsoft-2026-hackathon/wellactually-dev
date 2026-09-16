@@ -49,7 +49,7 @@ test("real SDK reads both complete trees without following links outside them or
     await Promise.all(Array.from({ length: 260 }, (_, index) =>
       writeFile(path.join(root, "many", `${index}.txt`), index === 259 ? "DEEP_MARKER" : "synthetic")));
     const chatRoot = path.join(directory, "workspaceStorage", "synthetic-workspace");
-    const chatRecords = path.join(chatRoot, "chatSessions");
+    const chatRecords = path.join(directory, "globalStorage", "emptyWindowChatSessions");
     const chatArtifacts = path.join(chatRoot, "chatEditingSessions", "chosen");
     await mkdir(chatRecords, { recursive: true });
     await mkdir(chatArtifacts, { recursive: true });

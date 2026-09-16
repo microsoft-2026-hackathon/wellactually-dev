@@ -179,9 +179,12 @@ export async function createReadPolicy(workspaceDirectory: string): Promise<Read
             throw new Error("READ_DRIVER_INVALID");
           }
           if (next.artifactsDirectory) {
-            const expected = path.join(path.dirname(path.dirname(next.file)), "chatEditingSessions", next.sessionId);
-            if (next.artifactsDirectory !== expected || await realpath(expected) !== expected ||
-                !(await lstat(expected)).isDirectory()) throw new Error("READ_DRIVER_INVALID");
+            const artifacts = next.artifactsDirectory;
+            if (!path.isAbsolute(artifacts) || path.normalize(artifacts) !== artifacts ||
+                path.basename(artifacts) !== next.sessionId || path.basename(path.dirname(artifacts)) !== "chatEditingSessions" ||
+                await realpath(artifacts) !== artifacts || !(await lstat(artifacts)).isDirectory()) {
+              throw new Error("READ_DRIVER_INVALID");
+            }
           }
         } else if (!path.isAbsolute(next.directory) || path.normalize(next.directory) !== next.directory ||
             path.basename(next.directory) !== next.sessionId ||

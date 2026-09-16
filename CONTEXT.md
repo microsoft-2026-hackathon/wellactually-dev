@@ -171,8 +171,9 @@ ordinary Copilot Chat indexes from every saved workspace under the current
 VS Code user-data root plus the default profile's empty-window Chat index.
 `chat.ChatSessionStore.index` provides titles and timing; original transcripts
 remain in `chatSessions/<sessionId>.jsonl` or legacy `.json` files.
-It also combines VS Code's profile-level `agent-host.db` registrations with Copilot records in
-`~/.copilot/session-state` and `COPILOT_HOME/session-state` when configured.
+It also combines VS Code's profile-level `agent-host.db` registrations with
+Copilot records in `~/.copilot/session-state` and `COPILOT_HOME/session-state`
+when configured.
 VS Code `customTitle` and `defaultChatProviderData.sdkSessionId` metadata supply
 the displayed title and the backing SDK conversation identity. SDK records use
 an explicit user name or summary, never the automatically seeded first-message
@@ -188,7 +189,7 @@ Agent mode in an ordinary Chat panel does not imply agent-host storage.
 Selection revalidates the current index and record identity: an SDK session
 header, or a standard Chat snapshot's session ID. Legacy JSON is streamed to
 the identity without retaining a parsed conversation or creating a copy.
-the Pair then reads the original records and artifacts directly.
+The Pair then reads the original records and artifacts directly.
 The host does not watch, copy,
 normalize, correlate, or automatically react to Driver records. The human asks
 when to review results. The SDK maintains conversational context and performs
@@ -201,7 +202,7 @@ confirmation, automatic scheduler, or persistent exit-snapshot recovery.
 Deliberation Loop and Result Review remain conversational concepts, not stages
 the UI forces the user to advance.
 
-Both shared trees can contain secrets; there is no automatic sensitive-file
+Both shared scopes can contain secrets; there is no automatic sensitive-file
 exclusion or sanitization. Share only projects and sessions appropriate for the
 Pair's model service, and use synthetic data for demonstrations.
 

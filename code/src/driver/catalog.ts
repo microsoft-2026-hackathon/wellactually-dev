@@ -42,12 +42,12 @@ export async function listDriverCatalog(stores: readonly string[], vscode: Vscod
     entries.set(session.directory, { ...session, origin: "copilot" });
   }
   for (const session of registered.sessions) {
-    const backing = stored.find(item => item.sessionId === session.sdkSessionId);
-    const directory = backing?.directory ?? path.join(stores[0]!, session.sdkSessionId);
-    const supported = session.provider === "copilotcli";
+    const supported = session.provider === "copilotcli" && session.sdkSessionId !== undefined;
+    const backing = supported ? stored.find(item => item.sessionId === session.sdkSessionId) : undefined;
+    const directory = backing?.directory ?? path.join(stores[0]!, session.sdkSessionId ?? session.id);
     const entry: DriverCatalogEntry = {
       directory,
-      sessionId: session.sdkSessionId,
+      sessionId: session.sdkSessionId ?? session.id,
       title: session.title ?? backing?.title ?? session.id,
       workspace: session.workspace ?? backing?.workspace ?? "",
       modifiedTime: session.modifiedTime,
