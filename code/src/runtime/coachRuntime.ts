@@ -315,6 +315,9 @@ export function attachCoachRuntime(
             if (typeof toolCallId !== "string" || !(READ_TOOLS as readonly string[]).includes(toolName)) {
               throw new Error("COACH_TOOL_POLICY_VIOLATION");
             }
+            // A planning message cannot stand in for the answer after this tool work.
+            hasFinalMessage = false;
+            hasTurnEnded = false;
             const sourceFiles = policy.sourceFiles(toolName, toolArguments);
             void sourceFiles.catch(() => {});
             pendingReads.set(toolCallId, { name: toolName, sourceFiles });

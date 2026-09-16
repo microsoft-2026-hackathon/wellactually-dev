@@ -35,6 +35,40 @@ class FakeSession implements RuntimeSession {
   }
 }
 
+test("post-tool completion cannot inherit a planning message or an earlier turn end", async () => {
+  const root = path.resolve("test/fixtures/workspace");
+  for (const ending of ["none", "answer-only", "turn-end-only"]) {
+    const session = new FakeSession();
+    session.onSend = () => {
+      session.emit("assistant.message", { messageId: "planning", content: "I will inspect the fixture." });
+      session.emit("assistant.turn_end", { turnId: "planning-turn" });
+      session.emit("tool.execution_start", {
+        toolCallId: "read", toolName: "view", arguments: { path: path.join(root, "catalog.ts") },
+      });
+      session.emit("tool.execution_complete", {
+        toolCallId: "read", success: true, result: { content: "Synthetic excerpt" },
+      });
+      if (ending === "answer-only") {
+        session.emit("assistant.message", { messageId: "answer", content: "An answer without turn completion." });
+      }
+      if (ending === "turn-end-only") session.emit("assistant.turn_end", { turnId: "answer-turn" });
+      session.emit("session.idle", {});
+    };
+    const runtime = attachCoachRuntime(session, await createReadPolicy(root), async () => {});
+    const chat = createChat({ async createRuntime() { return runtime; }, publish() {}, emit() {} });
+    try {
+      await assert.rejects(chat.submit("Inspect the fixture"), /COACH_COMPLETION_MISSING/, ending);
+      assert.equal(chat.getState().messages.at(-1)?.partial, true);
+      assert.equal(chat.getState().status, "idle");
+      assert.equal(runtime.closed, false);
+      session.onSend = () => session.finish("A complete retry.");
+      await chat.submit("Continue the discussion");
+      assert.equal(chat.getState().messages.at(-1)?.text, "A complete retry.");
+      assert.equal(chat.getState().messages.at(-1)?.partial, undefined);
+    } finally { await chat.end(); }
+  }
+});
+
 test("one Pair streams text and bounded source excerpts without replaying its final text", async () => {
   const session = new FakeSession();
   const root = path.resolve("test/fixtures/workspace");

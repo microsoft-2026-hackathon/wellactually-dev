@@ -183,6 +183,19 @@ export async function createIsolatedClient(isolatedDirectory: string, auth?: Run
   });
 }
 
+export async function getHostGitHubToken(
+  signal: AbortSignal,
+  getSession: (interactive: boolean) => Promise<{ accessToken: string } | undefined>,
+): Promise<string | undefined> {
+  if (signal.aborted) return undefined;
+  const existing = await getSession(false);
+  if (signal.aborted) return undefined;
+  if (existing) return existing.accessToken;
+  const session = await getSession(true);
+  if (signal.aborted) return undefined;
+  return session?.accessToken;
+}
+
 /** 기존 인증을 먼저 확인하고, 사용할 수 없을 때만 호스트 토큰을 받아 새 클라이언트를 연다. */
 export async function authenticateClient<T extends Pick<CopilotClient, "getAuthStatus" | "stop" | "forceStop">>(
   open: (auth?: RuntimeAuth) => Promise<T>, getToken?: () => Promise<string | undefined>,

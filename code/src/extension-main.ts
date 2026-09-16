@@ -7,6 +7,7 @@ import { createChat } from "./pairing/chat.js";
 import { inspectDriverSession, listDriverSessions } from "./driver/source.js";
 import { createDriverSelection } from "./driver/selection.js";
 import { createCoachRuntime } from "./runtime/coachRuntime.js";
+import { getHostGitHubToken } from "./runtime/sdkRuntime.js";
 import { CoachViewProvider } from "./ui/coachView.js";
 import type { ViewCommand, ViewState } from "./ui/messages.js";
 import { hostFailureText, hostText, type HostMessage } from "./hostMessages.js";
@@ -40,18 +41,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
     return vscode.workspace.getConfiguration("wellactually").get<string>("model", "").trim();
   }
 
-  /** 기존 VS Code GitHub 인증을 먼저 재사용하고, 없을 때만 사용자 승인을 요청한다. */
-  async function getGitHubToken(signal: AbortSignal): Promise<string | undefined> {
-    if (signal.aborted) return undefined;
-    // 로그인 상태여도 이 확장에 대한 승인이 필요할 수 있으므로 먼저 조용히 재사용을 시도한다.
-    const existingSession = await vscode.authentication.getSession("github", ["user:email"], { silent: true });
-    if (signal.aborted) return undefined;
-    if (existingSession) return existingSession.accessToken;
-
-    const session = await vscode.authentication.getSession("github", ["user:email"], {
-      createIfNone: { detail: hostText("authDetail") },
+  function getGitHubToken(signal: AbortSignal): Promise<string | undefined> {
+    return getHostGitHubToken(signal, async interactive => {
+      return vscode.authentication.getSession("github", ["user:email"], interactive
+        ? { createIfNone: { detail: hostText("authDetail") } }
+        : { silent: true });
     });
-    return session?.accessToken;
   }
 
   /** 신뢰된 로컬 워크스페이스에서 이번 대화가 참고할 프로젝트 하나를 선택해 실제 경로로 고정한다. */

@@ -90,6 +90,9 @@ selected account. If unavailable, the host silently requests an existing
 authorized VS Code GitHub session, then asks for account access only if needed.
 No private credential caches are read and no token is printed or stored in
 the repository. Failures remain visible.
+If startup is stopped while account consent is pending, a later approval is
+not used to open an authenticated Pair client for that cancelled request.
+The native consent dialog itself may remain open until the provider resolves it.
 
 `wellactually.model` applies to new Pair conversations; the default is
 `claude-haiku-4.5`, with actual read-tool inventory checked. There is no
@@ -140,6 +143,9 @@ There is no Compiler, report snapshot/cache/export or persistent recovery.
 Old user-exported reports, Driver logs and earlier-version retained snapshots
 are not deleted. Owned temporary runtime data is removed after verified
 cleanup; cleanup errors remain visible.
+After tool work, the Pair must produce a final reply and turn-end event;
+an earlier planning message cannot satisfy completion. Missing final output
+is reported as incomplete, with any received text retained as partial.
 If a response failure closes the runtime, the chat ends instead of accepting
 messages on that closed runtime. Verified client shutdown permits fresh-chat
 cleanup without retrying RPCs on a stopped client. Unverified cleanup remains

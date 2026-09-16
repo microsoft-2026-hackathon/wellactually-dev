@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import {
-  authenticateClient, deadline, isolatedClientOptions, readSessionConfig, stopClient, withClientCleanupOnFailure,
+  authenticateClient, deadline, getHostGitHubToken, isolatedClientOptions, readSessionConfig, stopClient, withClientCleanupOnFailure,
 } from "../src/runtime/sdkRuntime.js";
 
 test("private runtime attempts ambient auth without exposing credentials or using default data storage", () => {
@@ -44,6 +44,49 @@ test("host credentials are requested only when private runtime authentication is
   }), async () => { prompted = true; return undefined; });
   assert.equal(prompted, false);
   await assert.rejects(authenticateClient(open, async () => undefined), /COACH_AUTH_REQUIRED/);
+});
+
+test("cancelled host consent cannot open an authenticated client after a late approval", async () => {
+  const controller = new AbortController();
+  let approve!: (session: { accessToken: string }) => void;
+  const consent = new Promise<{ accessToken: string }>(resolve => { approve = resolve; });
+  const requests: boolean[] = [];
+  const opened: boolean[] = [];
+  const result = authenticateClient(async auth => {
+    opened.push(!!auth);
+    return {
+      async getAuthStatus() { return { isAuthenticated: !!auth }; },
+      async stop() { return []; },
+      async forceStop() {},
+    };
+  }, () => getHostGitHubToken(controller.signal, async interactive => {
+    requests.push(interactive);
+    return interactive ? consent : undefined;
+  }));
+  const rejected = assert.rejects(result, /COACH_AUTH_REQUIRED/);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(requests, [false, true]);
+  controller.abort();
+  approve({ accessToken: "synthetic-late-approval" });
+  await rejected;
+  assert.deepEqual(opened, [false]);
+});
+
+test("host authentication still reuses existing sessions and obtains active consent when needed", async () => {
+  for (const existing of [true, false]) {
+    const requests: boolean[] = [];
+    const token = await getHostGitHubToken(new AbortController().signal, async interactive => {
+      requests.push(interactive);
+      return existing || interactive ? { accessToken: "synthetic-active-token" } : undefined;
+    });
+    assert.equal(token, "synthetic-active-token");
+    assert.deepEqual(requests, existing ? [false] : [false, true]);
+  }
+  const stopped = new AbortController();
+  stopped.abort();
+  let calls = 0;
+  assert.equal(await getHostGitHubToken(stopped.signal, async () => { calls++; return undefined; }), undefined);
+  assert.equal(calls, 0);
 });
 
 test("persistent Pair customizes behavior without replacing SDK safety or read permissions", async () => {
