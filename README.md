@@ -30,7 +30,8 @@ developer a deliberate role in engineering judgment.
    the results in the persistent SDK conversation. There is no automatic reaction.
 5. The user stops a response or ends the conversation without affecting Driver work.
 
-The product interface and Pair answers are Korean-only. There is no language
+The interface and Pair answers use Korean, except for the English branded
+composer placeholder. There is no language
 selector or Knowledge Compilation/report feature in the current prototype.
 Read-only access covers the current project and the selected Driver's records
 and artifacts. Standard Chat shares its exact transcript and session-specific

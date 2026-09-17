@@ -53,20 +53,26 @@ Sending the first message shares the complete current project tree read-only,
 including directory listings, hidden files and dependencies. Sensitive files
 are not automatically excluded; use a project appropriate for the model service.
 
-All controls and Pair responses are Korean. Code, identifiers and quoted
-source text keep their original language. There is no language setting.
+Controls and Pair responses are Korean, with the requested English composer
+placeholder **Pair Programming with WellActually...** as a branding exception.
+Code, identifiers and quoted source text keep their original language.
+There is no language setting.
 
 ## Input and controls
 
 The composer groups the text box, read-only Pair role label, model and reasoning
 selectors, and send/stop controls in one input area, similar to the familiar
 Copilot Chat layout.
+The text box starts at one line and grows with its content up to a compact
+height limit. The model button shows the SDK model name, or the selected model
+ID until model metadata has loaded; it does not use generic model categories.
 
 - Select a model from the input footer. The list comes from the Pair SDK's
   available models and may differ from the separate Driver's model list.
 - Select a reasoning level when the model offers one. Model-default behavior is
   used when no explicit level is selected; no selectable level does not mean
   reasoning is disabled.
+  **사용 안 함** is available only when the model explicitly supports `none`.
 - Changes apply to the next message while preserving the current discussion
   and Driver connection. Model changes are unavailable during a response.
 - The workspace remembers your choices for new chats and after reloading.
@@ -74,6 +80,8 @@ Copilot Chat layout.
   settings; it does not itself send a model request.
 
 - Enter sends; Shift+Enter inserts a line break.
+- The compact send button is inactive and uncolored while the input is empty
+  or whitespace-only; entering text enables it when the Pair is otherwise idle.
 - Korean IME composition does not accidentally send.
 - Messages are limited to 16 KiB UTF-8.
 - **응답 중단** stops only the Pair's current response.
@@ -134,7 +142,7 @@ the SDK. Native recursive search can skip Git metadata; explicit file reads
 remain available. Disconnecting removes the session's additional read scope,
 but project access and already-discussed excerpts remain. New chat resets the
 Driver selection, and extension reload does not restore it.
-Search excerpts are labeled with `grep` and the actual searched paths, including
+Search excerpts are labeled with `grep` or `rg` and the actual searched paths, including
 paths in the selected Driver session. A search excerpt is not a complete file read.
 
 ## Removed features and lifetime

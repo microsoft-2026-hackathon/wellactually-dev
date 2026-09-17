@@ -210,6 +210,8 @@ The Secondary Side Bar contains the transcript and pinned composer. Settings
 contain project information and Driver connection only. Product controls,
 host messages and Pair responses use Korean; there is no language selector or
 language preference. Code, identifiers and quoted source excerpts are unchanged.
+The composer placeholder is the requested English branding exception:
+`Pair Programming with WellActually...`; it does not change the response language.
 The composer exposes model and reasoning selectors using the SDK's actual
 inventory and model-specific supported levels. An idle conversation can switch
 models without resetting its transcript or Driver connection; the next message

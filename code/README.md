@@ -3,7 +3,9 @@
 See the [user guide](../docs/user-guide.md) for use and the
 [code reading guide](../docs/code-review.md) for implementation structure.
 The [product design](../docs/specs/2026-09-12-wellactually-product-design.md)
-is the current behavior contract. The interface and Pair responses are Korean-only.
+is the current behavior contract. Controls and Pair responses use Korean;
+the composer placeholder is the English branding exception
+`Pair Programming with WellActually...`.
 
 The project and extension are still **Wellactually**. The conversational role
 is **Pair** in English and **페어** in the Korean interface. Existing internal
@@ -48,6 +50,18 @@ node --test dist/test/sdkPaths.integration.js
 The last command uses real SDK tools with synthetic files, not model
 inference. The separate Extension Host integration needs VS Code.
 No additional framework, database, linter or cloud service is introduced.
+
+The opt-in authenticated model-control check is separate:
+
+```sh
+WELLACTUALLY_LIVE_MODEL_CHECK=1 node --test dist/test/modelControls.live.js
+```
+
+It requires supported SDK authentication and account access to the tested
+models, and makes two small synthetic model requests (which consume usage).
+It checks real catalog normalization, low/high/none effort switching, model-
+specific `grep`/`rg` tool names, read boundaries and conversation retention.
+It does not interact with VS Code's native account-consent or Quick Pick UI.
 
 ## Pairing behavior
 
@@ -105,6 +119,11 @@ levels come from Copilot SDK metadata, not a hardcoded copy of VS Code Chat's
 catalog. Policy-disabled models are excluded. A model without selectable
 reasoning levels uses its own behavior; this does not mean it performs no
 reasoning. Model names remain as provided by the SDK; control labels are Korean.
+The wire catalog can advertise `none` even though SDK 1.0.13 omits it from its
+TypeScript enum. Pair accepts it only for models that advertise support and
+applies it through the model RPC. The read-only search tool may be named `grep`
+or `rg` depending on the model; both names receive the same path/argument checks.
+Tool inventory validation still rejects extra write, shell or other tools.
 The model picker recommends current high-capability (frontier) models for
 complex design discussions, with a speed/usage caveat. This is conditional
 guidance, not measured Pair-quality superiority, a required model tier, or an

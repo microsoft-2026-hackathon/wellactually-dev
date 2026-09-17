@@ -7,6 +7,7 @@ from earlier versions do not verify the current flow.
 
 ## Technical acceptance
 
+- [x] Authenticated SDK model-control check: catalog lookup, low/high/none switches, model-specific read-tool aliases, source denial and two synthetic production-runtime turns passed on September 17. This is not native picker/consent UI acceptance.
 - [ ] Build, run relevant tests, and package the locked darwin-arm64 SDK assets.
 - [ ] Activate the installed extension and receive Webview ready without a model.
 - [ ] Verify Korean controls regardless of the VS Code locale, with no language selector.
