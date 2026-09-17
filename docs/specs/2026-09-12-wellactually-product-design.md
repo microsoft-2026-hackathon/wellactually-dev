@@ -152,7 +152,8 @@ Memory and cross-session search remain disabled. Compaction is not guaranteed
 verbatim recall. Ending deletes only owned temporary runtime data after
 verified cleanup; arbitrary host-restart continuity is not promised.
 
-Allow read-only `view` and `grep` on the current project and selected Driver.
+Allow read-only `view` and search (`grep` or its model-specific `rg` alias) on
+the current project and selected Driver.
 For SDK sessions, authorize the entire dedicated Driver session directory.
 For standard VS Code Copilot Chat, authorize its exact original JSON/JSONL
 transcript and session-specific `chatEditingSessions/<sessionId>` tree if present.

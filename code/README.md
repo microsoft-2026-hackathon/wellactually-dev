@@ -60,7 +60,8 @@ WELLACTUALLY_LIVE_MODEL_CHECK=1 node --test dist/test/modelControls.live.js
 It requires supported SDK authentication and account access to the tested
 models, and makes two small synthetic model requests (which consume usage).
 It checks real catalog normalization, low/high/none effort switching, model-
-specific `grep`/`rg` tool names, read boundaries and conversation retention.
+specific `grep`/`rg` tool names, selected Driver access, revoked Driver-scope
+denial and conversation retention.
 It does not interact with VS Code's native account-consent or Quick Pick UI.
 
 ## Pairing behavior

@@ -50,12 +50,27 @@ test("model and reasoning switches preserve the SDK conversation and selected Dr
     async listModels() { return models; },
     async setModel(value) { changes.push(value); },
   });
+  const directory = await mkdtemp(path.resolve(".model-driver-scope-"));
   try {
+    const previous = { directory: path.join(directory, "previous"), sessionId: "previous", title: "Previous Driver" };
+    const selected = { directory: path.join(directory, "selected"), sessionId: "selected", title: "Selected Driver" };
+    await mkdir(previous.directory);
+    await mkdir(selected.directory);
+    const previousFile = path.join(previous.directory, "events.jsonl");
+    const selectedFile = path.join(selected.directory, "events.jsonl");
+    await writeFile(previousFile, '{"text":"SYNTHETIC_PREVIOUS"}\n');
+    await writeFile(selectedFile, '{"text":"SYNTHETIC_SELECTED"}\n');
+    await runtime.setDriver(previous);
     for await (const _ of runtime.stream("First message", new AbortController().signal)) {}
     const prompts = session.prompts.length;
     assert.deepEqual(await runtime.listModels(), models);
     await runtime.setModel({ modelId: "first", reasoningEffort: "high" });
+    assert.deepEqual(await policy.sourceFiles("view", { path: previousFile }), [previousFile]);
+    await runtime.setDriver(selected);
     await runtime.setModel({ modelId: "second" });
+    assert.deepEqual(policy.driver, selected);
+    assert.deepEqual(await policy.sourceFiles("view", { path: selectedFile }), [selectedFile]);
+    await assert.rejects(policy.sourceFiles("view", { path: previousFile }), /READ_PATH_DENIED/);
     assert.deepEqual(changes, [{ modelId: "first", reasoningEffort: "high" }, { modelId: "second" }]);
     assert.equal(session.prompts.length, prompts);
     assert.equal(session.disconnected, 0);
@@ -66,7 +81,10 @@ test("model and reasoning switches preserve the SDK conversation and selected Dr
     assert.equal(runtime.closed, false);
     for await (const _ of runtime.stream("Follow-up", new AbortController().signal)) {}
     assert.equal(session.prompts.length, prompts + 1);
-  } finally { await runtime.close(); }
+  } finally {
+    try { await runtime.close(); }
+    finally { await rm(directory, { recursive: true, force: true }); }
+  }
 });
 
 test("an unconfirmed model switch ends the chat instead of showing stale settings on a live runtime", async () => {
