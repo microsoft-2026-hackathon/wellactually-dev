@@ -1,0 +1,1344 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Wellactually 제품 기획 문서" />
+    <title>Wellactually 제품 기획</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&amp;family=IBM+Plex+Sans+KR:wght@400;500;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --ink: #18262a;
+        --ink-soft: #4c5b5f;
+        --paper: #f7f9f7;
+        --surface: #ffffff;
+        --line: #ced8d5;
+        --teal: #176b68;
+        --teal-deep: #0f4c4a;
+        --coral: #c94f3d;
+        --gold: #b17a17;
+        --wash: #e8f1ef;
+        --code: #132d31;
+        --content: 760px;
+        --sidebar: 248px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background-color: var(--paper);
+        background-image: radial-gradient(#b9c9c5 0.65px, transparent 0.65px);
+        background-size: 18px 18px;
+        font-family: "IBM Plex Sans KR", "Apple SD Gothic Neo", sans-serif;
+        font-size: 17px;
+        line-height: 1.82;
+        word-break: keep-all;
+      }
+
+      a {
+        color: var(--teal-deep);
+        text-decoration-color: #87aaa5;
+        text-decoration-thickness: 1px;
+        text-underline-offset: 4px;
+      }
+
+      a:hover {
+        color: var(--coral);
+        text-decoration-color: currentColor;
+      }
+
+      .skip-link {
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        z-index: 20;
+        padding: 8px 12px;
+        color: #fff;
+        background: var(--ink);
+        transform: translateY(-160%);
+      }
+
+      .skip-link:focus {
+        transform: translateY(0);
+      }
+
+      .page {
+        display: grid;
+        grid-template-columns: var(--sidebar) minmax(0, var(--content));
+        gap: 72px;
+        width: min(1180px, calc(100% - 64px));
+        margin: 0 auto;
+        padding: 48px 0 96px;
+      }
+
+      .toc {
+        position: sticky;
+        top: 32px;
+        align-self: start;
+        max-height: calc(100vh - 64px);
+        padding: 20px 0;
+        overflow: auto;
+        border-top: 3px solid var(--coral);
+      }
+
+      .toc-title {
+        margin: 0 0 14px;
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      .toc ol {
+        display: grid;
+        gap: 2px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        counter-reset: toc;
+      }
+
+      .toc li {
+        counter-increment: toc;
+      }
+
+      .toc a {
+        display: grid;
+        grid-template-columns: 28px 1fr;
+        gap: 4px;
+        padding: 5px 6px;
+        color: var(--ink-soft);
+        font-size: 13px;
+        line-height: 1.45;
+        text-decoration: none;
+      }
+
+      .toc a::before {
+        content: counter(toc, decimal-leading-zero);
+        color: var(--coral);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .toc a:hover {
+        color: var(--ink);
+        background: var(--wash);
+      }
+
+      main {
+        min-width: 0;
+      }
+
+      .hero {
+        position: relative;
+        margin-bottom: 68px;
+        padding: 56px 0 48px;
+        border-top: 8px solid var(--ink);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .hero::after {
+        position: absolute;
+        right: 0;
+        bottom: -4px;
+        width: 128px;
+        height: 7px;
+        content: "";
+        background: var(--coral);
+      }
+
+      .eyebrow {
+        margin: 0 0 18px;
+        color: var(--coral);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        max-width: 700px;
+        margin: 0;
+        font-family: "Gowun Batang", "AppleMyungjo", serif;
+        font-size: clamp(46px, 8vw, 82px);
+        line-height: 1.02;
+        letter-spacing: 0;
+      }
+
+      .hero-subtitle {
+        max-width: 620px;
+        margin: 22px 0 0;
+        color: var(--ink-soft);
+        font-size: 22px;
+        line-height: 1.55;
+      }
+
+      .hero-quote {
+        margin: 34px 0 0;
+        color: var(--teal-deep);
+        font-size: 18px;
+        font-weight: 700;
+      }
+
+      .mobile-toc {
+        display: none;
+        margin: -36px 0 48px;
+        border-block: 1px solid var(--line);
+      }
+
+      .mobile-toc summary {
+        padding: 13px 0;
+        color: var(--teal-deep);
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .mobile-toc ol {
+        columns: 2;
+        margin: 0;
+        padding: 4px 0 16px 22px;
+      }
+
+      .mobile-toc li {
+        margin-bottom: 5px;
+        break-inside: avoid;
+      }
+
+      .mobile-toc a {
+        font-size: 13px;
+        text-decoration: none;
+      }
+
+      section {
+        margin: 0 0 82px;
+        scroll-margin-top: 24px;
+      }
+
+      h2 {
+        display: grid;
+        grid-template-columns: 48px 1fr;
+        gap: 14px;
+        align-items: baseline;
+        margin: 0 0 28px;
+        padding-top: 18px;
+        border-top: 2px solid var(--ink);
+        font-size: 28px;
+        line-height: 1.35;
+        letter-spacing: 0;
+      }
+
+      h2 .section-number {
+        color: var(--coral);
+        font-size: 14px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      h3 {
+        margin: 40px 0 12px;
+        color: var(--teal-deep);
+        font-size: 20px;
+        line-height: 1.45;
+        letter-spacing: 0;
+      }
+
+      p {
+        margin: 0 0 19px;
+      }
+
+      strong {
+        font-weight: 700;
+      }
+
+      ul {
+        margin: 12px 0 24px;
+        padding-left: 23px;
+      }
+
+      li {
+        margin: 6px 0;
+        padding-left: 4px;
+      }
+
+      li::marker {
+        color: var(--coral);
+      }
+
+      .lede {
+        padding-left: 20px;
+        border-left: 4px solid var(--teal);
+        font-size: 20px;
+        line-height: 1.68;
+      }
+
+      .statement {
+        margin: 32px 0;
+        padding: 22px 24px;
+        color: var(--ink);
+        background: var(--wash);
+        border-left: 4px solid var(--gold);
+        font-size: 19px;
+        font-weight: 600;
+      }
+
+      .references {
+        margin-top: 26px;
+        padding: 20px 24px 20px 44px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+      }
+
+      .role-list {
+        display: grid;
+        gap: 0;
+        margin: 28px 0;
+        padding: 0;
+        list-style: none;
+        border-block: 1px solid var(--line);
+      }
+
+      .role-list li {
+        display: grid;
+        grid-template-columns: 118px 1fr;
+        gap: 18px;
+        margin: 0;
+        padding: 20px 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .role-list li:last-child {
+        border-bottom: 0;
+      }
+
+      .role-list strong {
+        color: var(--coral);
+      }
+
+      pre {
+        margin: 28px 0;
+        padding: 24px;
+        overflow-x: auto;
+        color: #e4f1ee;
+        background: var(--code);
+        border-left: 5px solid var(--coral);
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 14px;
+        line-height: 1.75;
+        white-space: pre;
+      }
+
+      code {
+        padding: 2px 6px;
+        color: var(--teal-deep);
+        background: #e4edeb;
+        border-radius: 3px;
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 0.88em;
+      }
+
+      .method-list,
+      .mode-list {
+        margin-top: 30px;
+        border-top: 1px solid var(--line);
+      }
+
+      .method,
+      .mode {
+        display: grid;
+        grid-template-columns: 62px 1fr;
+        gap: 18px;
+        padding: 28px 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .method-index,
+      .mode-index {
+        color: var(--coral);
+        font-size: 14px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .method h3,
+      .mode h3 {
+        margin: -5px 0 12px;
+        color: var(--ink);
+        font-size: 21px;
+      }
+
+      .method p:last-child,
+      .mode p:last-child {
+        margin-bottom: 0;
+      }
+
+      .mode-index {
+        color: var(--teal);
+      }
+
+      .mode-focus {
+        margin-bottom: 14px;
+        color: var(--teal-deep);
+        font-size: 15px;
+        font-weight: 700;
+      }
+
+      .competency-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+        margin: 28px 0;
+      }
+
+      .competency {
+        padding: 22px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-top: 5px solid var(--teal);
+      }
+
+      .competency:nth-child(2) {
+        border-top-color: var(--coral);
+      }
+
+      .competency h3 {
+        margin-top: 0;
+        color: var(--ink);
+      }
+
+      .competency ul {
+        margin-bottom: 0;
+        font-size: 15px;
+        line-height: 1.7;
+      }
+
+      blockquote {
+        margin: 30px 0;
+        padding: 24px 0 24px 24px;
+        color: var(--teal-deep);
+        border-left: 6px solid var(--coral);
+        font-family: "Gowun Batang", "AppleMyungjo", serif;
+        font-size: 25px;
+        font-weight: 700;
+        line-height: 1.55;
+      }
+
+      .narrative-list strong {
+        color: var(--teal-deep);
+      }
+
+      .document-footer {
+        margin-top: 96px;
+        padding-top: 24px;
+        color: var(--ink-soft);
+        border-top: 1px solid var(--line);
+        font-size: 13px;
+      }
+
+      @media (max-width: 1000px) {
+        .page {
+          grid-template-columns: minmax(0, var(--content));
+          justify-content: center;
+          width: min(100% - 48px, var(--content));
+        }
+
+        .toc {
+          display: none;
+        }
+
+        .mobile-toc {
+          display: block;
+        }
+      }
+
+      @media (max-width: 640px) {
+        body {
+          font-size: 16px;
+          line-height: 1.76;
+        }
+
+        .page {
+          width: calc(100% - 36px);
+          padding-top: 22px;
+        }
+
+        .hero {
+          margin-bottom: 56px;
+          padding: 40px 0 38px;
+        }
+
+        h1 {
+          font-size: 44px;
+        }
+
+        .hero-subtitle {
+          font-size: 19px;
+        }
+
+        .mobile-toc ol {
+          columns: 1;
+        }
+
+        section {
+          margin-bottom: 64px;
+        }
+
+        h2 {
+          grid-template-columns: 38px 1fr;
+          gap: 8px;
+          font-size: 24px;
+        }
+
+        .lede {
+          font-size: 18px;
+        }
+
+        .role-list li,
+        .method,
+        .mode {
+          grid-template-columns: 1fr;
+          gap: 8px;
+        }
+
+        .competency-grid {
+          grid-template-columns: 1fr;
+        }
+
+        pre {
+          margin-inline: -18px;
+          padding: 20px 18px;
+          font-size: 12px;
+        }
+
+        blockquote {
+          font-size: 21px;
+        }
+      }
+
+      @media print {
+        body {
+          color: #000;
+          background: #fff;
+          font-size: 11pt;
+        }
+
+        .page {
+          display: block;
+          width: auto;
+          padding: 0;
+        }
+
+        .toc,
+        .mobile-toc,
+        .skip-link {
+          display: none;
+        }
+
+        .hero {
+          break-after: page;
+        }
+
+        section {
+          margin-bottom: 36px;
+        }
+
+        h2,
+        h3 {
+          break-after: avoid;
+        }
+
+        .method,
+        .mode,
+        .competency,
+        pre,
+        blockquote {
+          break-inside: avoid;
+        }
+
+        a {
+          color: inherit;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <a class="skip-link" href="#content">본문으로 이동</a>
+
+    <div class="page">
+      <nav class="toc" aria-label="문서 목차">
+        <p class="toc-title">Contents</p>
+        <ol>
+          <li><a href="#positioning">제품 포지셔닝</a></li>
+          <li><a href="#persona">핵심 타깃과 사용자 페르소나</a></li>
+          <li><a href="#pain-point">Key Pain Point</a></li>
+          <li><a href="#pair-programming">페어 프로그래밍의 재해석</a></li>
+          <li><a href="#development-loop">반복되는 개발 루프</a></li>
+          <li><a href="#interactions">Navigator 상호작용 방식</a></li>
+          <li><a href="#modes">단계별 페어링 모드</a></li>
+          <li><a href="#competencies">기르고자 하는 역량</a></li>
+          <li><a href="#knowledge-compilation">Knowledge Compilation</a></li>
+          <li><a href="#product-shape">제품 형태</a></li>
+          <li><a href="#boundaries">제품 경계</a></li>
+          <li><a href="#name">이름이 담는 경험</a></li>
+          <li><a href="#hypotheses">검증이 필요한 가설</a></li>
+          <li><a href="#hackathon">해커톤 내러티브</a></li>
+        </ol>
+      </nav>
+
+      <main id="content">
+        <header class="hero">
+          <p class="eyebrow">Product Ideation / Wellactually</p>
+          <h1>Wellactually<br />제품 기획</h1>
+          <p class="hero-subtitle">
+            AI-native 주니어 개발자를 위한 단계형 Pair Programming with AI 경험
+          </p>
+          <p class="hero-quote">코드는 AI와 만들고, 판단은 나의 것으로.</p>
+        </header>
+
+        <details class="mobile-toc">
+          <summary>목차 열기</summary>
+          <ol>
+            <li><a href="#positioning">제품 포지셔닝</a></li>
+            <li><a href="#persona">핵심 타깃과 사용자 페르소나</a></li>
+            <li><a href="#pain-point">Key Pain Point</a></li>
+            <li><a href="#pair-programming">페어 프로그래밍의 재해석</a></li>
+            <li><a href="#development-loop">반복되는 개발 루프</a></li>
+            <li><a href="#interactions">Navigator 상호작용 방식</a></li>
+            <li><a href="#modes">단계별 페어링 모드</a></li>
+            <li><a href="#competencies">기르고자 하는 역량</a></li>
+            <li><a href="#knowledge-compilation">Knowledge Compilation</a></li>
+            <li><a href="#product-shape">제품 형태</a></li>
+            <li><a href="#boundaries">제품 경계</a></li>
+            <li><a href="#name">이름이 담는 경험</a></li>
+            <li><a href="#hypotheses">검증이 필요한 가설</a></li>
+            <li><a href="#hackathon">해커톤 내러티브</a></li>
+          </ol>
+        </details>
+
+        <article>
+          <section id="positioning">
+            <h2>
+              <span class="section-number">01</span><span>제품 포지셔닝</span>
+            </h2>
+            <p class="lede">
+              Wellactually는 AI-native 주니어 개발자를 위한 단계형
+              <strong>Pair Programming with AI</strong> 경험이다. 개발자는
+              구현에 Coding Agent를 계속 활용하면서, 점차 더 독립적인 방식으로
+              페어 프로그래밍을 경험하고 연습한다.
+            </p>
+            <p>
+              Coding Agent는 개발자가 방향에 담긴 전제를 충분히 살펴보기도 전에
+              불완전한 방향을 동작하는 코드로 바꿀 수 있다. Coding Agent는
+              국소적인 설계, 구현, 검증에는 효과적이지만, 그 속도로 인해 주니어
+              개발자가 전통적으로 모호함, 반례, 제약과 공학적 판단을 접하던 대화
+              과정이 사라질 수 있다.
+            </p>
+            <p>
+              Wellactually는 Coding Agent에게서 구현을 빼앗지 않으면서 그 대화를
+              복원한다. 사용자는 AI Pair와 작업을 반복해서 논의하고, 자신이
+              작성한 구현 지시를 AI Driver에게 전달한 뒤, 태스크가 전개됨에 따라
+              다시 Pair와 대화한다. 제품의 모드가 올라갈수록 Pair는 명시적인
+              발판을 덜 제공하고 더 선택적으로 개입한다. 그에 따라 사용자는 사고
+              과정에서 점차 더 큰 주도권을 갖게 된다.
+            </p>
+            <p>
+              이 제품은 코딩 위에 교육 과정을 덧씌운 것이 아니다. 성장은 실제
+              작업을 수행하면서 서로 다른 형태의 Navigator 지원을 반복해서
+              경험하는 과정에서 일어난다.
+            </p>
+            <p class="statement">
+              제품을 한 문장으로 표현하면 “코드는 AI와 만들고, 판단은 나의
+              것으로”다.
+            </p>
+          </section>
+
+          <section id="persona">
+            <h2>
+              <span class="section-number">02</span
+              ><span>핵심 타깃과 사용자 페르소나</span>
+            </h2>
+            <p class="lede">
+              <strong
+                >Primary Customer는 Coding Agent로 실제 개발과 배포는 할 수
+                있지만, 숙련된 개발자의 판단 과정을 경험하고 자신의 역량으로
+                형성할 기회가 부족한 AI-native 주니어 개발자다.</strong
+              >
+            </p>
+            <p>
+              여기서 AI-native란 개발 경력을 시작할 때부터 Coding Agent를
+              일상적인 작업 수단으로 사용해 온 사람을 뜻한다. 나이, 특정 모델의
+              사용 여부나 직접 코드를 작성하는 능력으로 구분하는 표현이 아니다.
+              이 사용자는 다음과 같은 일을 이미 할 수 있다.
+            </p>
+            <ul>
+              <li>Agent에게 구현을 요청하고 동작하는 결과를 얻는다.</li>
+              <li>여러 도구와 서비스를 연결해 기능이나 제품을 만든다.</li>
+              <li>개발 환경과 배포 절차를 사용해 결과물을 전달한다.</li>
+            </ul>
+            <p>
+              제품의 출발점에는 Coding Agent와 함께 개발 경력을 시작한 CSP
+              기업의 1년 차 엔지니어가 있다. 이 사용자는 Agent 활용과 배포에는
+              익숙하지만, 숙련된 개발자가 작업할 때 무엇을 고려하고 설계를
+              어떻게 전개하는지 가까이서 경험하기 어렵다는 공백을 느꼈다. 이는
+              초기 Persona를 구체화하는 실제 출발점이지, 특정 회사나 연차를
+              제품의 사용 자격으로 삼는다는 의미는 아니다.
+            </p>
+            <p>
+              모든 AI-native 주니어가 같은 문제를 겪는다고 가정하지 않는다.
+              그중에서도 Agent 중심의 개발 경험과 엔지니어링 판단을 형성할 기회
+              사이의 간극을 느끼고, 실제 작업을 통해 이를 채우려는 사람이 초기
+              핵심 타깃이다. 숙련된 개발자도 낯선 영역에서는 같은 지원을 선택할
+              수 있지만, 제품의 첫 설계 기준은 이 주니어의 경험이다.
+            </p>
+            <p>
+              Wellactually는 별도의 교육용 과제를 제공하지 않는다. 개인
+              프로젝트, 학습을 위해 이미 만들고 있는 프로젝트나 회사 제품처럼
+              사용자가 실제로 진행 중인 작업을 페어링과 성장의 맥락으로
+              사용한다.
+            </p>
+          </section>
+
+          <section id="pain-point">
+            <h2>
+              <span class="section-number">03</span><span>Key Pain Point</span>
+            </h2>
+            <p>
+              핵심 문제는 코드를 작성하지 못하거나 Agent를 사용할 줄 모르는 것이
+              아니다.
+              <strong
+                >구현 결과는 얻지만, 그 결과에 이르는 중요한 판단을 직접
+                수행하거나 숙련된 동료 옆에서 관찰할 기회가 부족하다는
+                것</strong
+              >이다.
+            </p>
+            <p>
+              문제 분해, 설계 선택, 오류 해석과 검증 방법 결정이 Agent의 작업
+              안에서 모두 처리되면 사용자는 요청과 결과만 보게 될 수 있다.
+              기능을 구현하고 테스트를 통과했다는 사실은 확인할 수 있지만, 왜 그
+              방법을 선택했고 어떤 조건에서 다른 선택이 필요한지 이해했다는 뜻은
+              아니다.
+            </p>
+            <p>
+              이 문제는 기존 역량을 덜 사용하면서 생기는 퇴화보다, 개발 경력
+              초기부터 그 역량을 형성할 경험이 충분하지 않은
+              <strong>역량 형성의 공백</strong>에 가깝다. 아직 경험하지 못한
+              판단에 대해서는 무엇을 질문해야 하는지조차 알기 어렵기 때문에,
+              사용자가 먼저 정확한 질문을 해야만 작동하는 설명 도구만으로는 이
+              공백을 채우기 어렵다.
+            </p>
+            <p>
+              제품의 목표는 AI를 덜 사용하거나 이전의 수작업 방식으로 돌아가는
+              것이 아니다. AI와 계속 개발하되, 이전부터 축적된 개발 방법론, 설계
+              원칙과 실전 노하우를 현재 작업의 판단에 적용해 보는 경험을 되찾는
+              것이다.
+            </p>
+            <p>
+              기존 연구는 Coding Agent를 사용한 과제 완료와 이해·판단의 어려움이
+              함께 나타날 수 있음을 보여주지만, 그 결과는 조건에 따라 다르다.
+              즉시 무보조 평가에서 낮은 이해도를 관찰한 연구와 Agent 제안 이후
+              다음 행동을 판단하기 어려워한 관찰 연구가 있는 반면, 직접 수정
+              연습과 교사 지원이 있는 환경에서는 주요 독립 평가의 유의한 차이를
+              찾지 못한 연구도 있다. 이는 문제 가설을 뒷받침하는 맥락이지, AI가
+              항상 학습에 해롭다거나 Wellactually가 장기적인 판단 역량을
+              높인다는 증거가 아니다.
+            </p>
+            <ul class="references">
+              <li>
+                <a
+                  href="https://arxiv.org/html/2601.20245v2"
+                  target="_blank"
+                  rel="noreferrer"
+                  >Shen &amp; Tamkin, How AI Impacts Skill Formation (2026)</a
+                >
+              </li>
+              <li>
+                <a
+                  href="https://arxiv.org/html/2405.17739v1"
+                  target="_blank"
+                  rel="noreferrer"
+                  >Prather et al., The Widening Gap (2024)</a
+                >
+              </li>
+              <li>
+                <a
+                  href="https://arxiv.org/html/2302.07427v2"
+                  target="_blank"
+                  rel="noreferrer"
+                  >Kazemitabaar et al., AI Code Generators and Novice Learners
+                  (2023)</a
+                >
+              </li>
+            </ul>
+          </section>
+
+          <section id="pair-programming">
+            <h2>
+              <span class="section-number">04</span
+              ><span>페어 프로그래밍의 재해석</span>
+            </h2>
+            <p>
+              전통적인 페어 프로그래밍에서는 두 개발자가 Driver와 Navigator
+              역할을 나누어 하나의 페어를 이루고, 필요에 따라 역할을 교대한다.
+              Driver는 생각을 말로 표현하고, 국소적인 설계 결정을 내리며
+              구현한다. Navigator는 Driver의 사고를 따라가면서 모호함이나 누락을
+              지적하고, 반례와 안티 케이스를 질문하며, 때로는 설계 방향이나 다음
+              접근의 실마리를 제공한다.
+            </p>
+            <p>
+              Wellactually는 전통적인 Driver의 활동을 사용자와 AI Driver 사이에
+              나눈다.
+            </p>
+            <ul class="role-list">
+              <li>
+                <strong>사용자</strong
+                ><span
+                  >문제, 의도, 큰 방향, 판단, 설계와 구현 Scope의 경계를
+                  소유한다. 사용자는 Pair와의 대화를 통해 이러한 생각을
+                  발전시키고 표현한 뒤, Driver에게 보낼 지시를 직접
+                  작성한다.</span
+                >
+              </li>
+              <li>
+                <strong>AI Driver</strong
+                ><span
+                  >구체적인 타입 선택이나 함수 구조화처럼 구현에 필요한 국소적인
+                  설계와 실제 구현을 담당한다. 코드를 조사하고 작업을 검증할 수
+                  있지만, 사용자를 대신해 문제를 새롭게 정의하거나 제품 방향을
+                  선택하거나 열린 형태의 기획을 독립적으로 수행하지
+                  않는다.</span
+                >
+              </li>
+              <li>
+                <strong>AI Pair</strong
+                ><span
+                  >전통적인 <strong>Navigator</strong> 역할을 맡는다. 사용자의
+                  사고와 구현 맥락을 따라가면서 질문, 반례, 놓친 제약, 관련
+                  지식이나 다음 접근의 실마리를 제공한다. 때로는 방향이나 작은
+                  범위의 설계를 제안할 수 있지만, 결정이나 구현을 소유하지
+                  않는다.</span
+                >
+              </li>
+            </ul>
+            <p>
+              사용자를 Human Navigator라고 부르면 안 된다. 이 모델에서
+              Navigator는 Pair의 기능을 가리킨다. 사용자는 작업을 소유하고
+              무엇을 할지 결정하는 개발자다.
+            </p>
+          </section>
+
+          <section id="development-loop">
+            <h2>
+              <span class="section-number">05</span
+              ><span>반복되는 개발 루프</span>
+            </h2>
+            <p>
+              페어링은 한 번 기획을 넘긴 뒤 구현하는 흐름이 아니다. 하나의
+              태스크는 논의와 구현 사이를 필요한 만큼 반복해서 오갈 수 있다.
+            </p>
+            <pre
+              aria-label="반복되는 개발 루프"
+            ><code>사용자 &lt;-&gt; Pair: 문제, 의도, 방향과 Scope을 논의
+사용자  -&gt; Driver: 구현 지시 전달
+Driver  -&gt; 작업: 국소적인 설계, 구현과 검증 수행
+사용자 &lt;-&gt; Pair: 새롭게 드러난 상황과 근거를 바탕으로 논의 계속
+사용자  -&gt; Driver: 다음 구현 지시 전달
+                ... 필요한 만큼 반복 ...</code></pre>
+            <p>
+              Pair는 Driver 지시를 승인하거나, Driver 결과를 채점하거나,
+              평가자의 위치에서 결과를 사용자의 최초 판단과 비교하지 않는다.
+              Driver 결과는 또 다른 질문, 제약이나 다음 방향의 가능성을 드러낼
+              수 있는 새로운 공동 맥락이다. 계속할지와 어떻게 계속할지는
+              사용자가 결정한다.
+            </p>
+            <p>
+              이 루프는 필수 단계의 연속이 아니라 대화로 유지되어야 한다. 구현의
+              경계는 논의하기 좋은 시점이지 의무적인 Gate가 아니다.
+            </p>
+          </section>
+
+          <section id="interactions">
+            <h2>
+              <span class="section-number">06</span
+              ><span>Navigator 상호작용 방식</span>
+            </h2>
+            <p class="lede">
+              Pair는 서로 보완하는 여섯 가지 상호작용 방식을 사용한다. 이들은
+              서로 다른 페르소나가 아니다. 하나의 일관되고 수평적인 Navigator가
+              무엇을 기여하고 어느 정도로 개입할지 선택하는 방식이다.
+            </p>
+            <div class="method-list">
+              <div class="method">
+                <span class="method-index">01</span>
+                <div>
+                  <h3>능동적 공동 탐색</h3>
+                  <p>
+                    Pair는 오류가 발생하거나 사용자가 명시적으로 질문할 때까지
+                    기다리기만 하지 않는다. 사용자가 설계나 구현 Scope의 다음
+                    부분을 구체화하는 데 도움이 되는 질문, 대안이나 실마리를
+                    먼저 제시할 수 있다.
+                  </p>
+                  <p>
+                    개발자는 아직 알지 못하는 문제에 대해서는 질문할 수 없기
+                    때문에 이러한 능동성이 필요하다. 동시에 Pair는 사용자를
+                    대신해 설계를 완성하는 것이 아니라 사용자의 다음 생각이
+                    이어지도록 해야 한다. 그렇지 않으면 사용자는 또 하나의 AI가
+                    만든 답을 승인하는 역할로 축소된다.
+                  </p>
+                </div>
+              </div>
+              <div class="method">
+                <span class="method-index">02</span>
+                <div>
+                  <h3>위험 기반 개입</h3>
+                  <p>
+                    Pair는 영향 범위, 되돌리기 가능성, 불확실성에 따라 개입
+                    강도를 바꾼다. 외부 계약, 데이터 모델, 보안,
+                    마이그레이션이나 태스크 경계를 바꾸는 결정에는 더 적극적으로
+                    개입한다. 되돌리기 쉬운 국소적인 구현 결정은 주로 Driver에게
+                    맡긴다.
+                  </p>
+                  <p>
+                    이를 통해 Navigator와 Driver의 역할을 구분한다. 개입 기준은
+                    선택이 기술적으로 어려운지가 아니라, 잘못된 전제로 인한
+                    비용이 크거나 나중에 발견하기 어려운지다.
+                  </p>
+                </div>
+              </div>
+              <div class="method">
+                <span class="method-index">03</span>
+                <div>
+                  <h3>미러링</h3>
+                  <p>
+                    Pair는 사용자의 현재 의도나 경계를 다시 표현하는 것이 불일치
+                    또는 숨은 전제를 드러낼 수 있을 때 이를 짧게 되짚는다.
+                  </p>
+                  <p>
+                    이는 가장 부담이 적은 이해 동기화 방식이다. 새로운 결론을
+                    강요하거나 Pair를 권위자로 만들지 않으면서, 사용자의 의도와
+                    곧 구현 지시가 될 내용 사이의 차이를 발견할 수 있다.
+                  </p>
+                </div>
+              </div>
+              <div class="method">
+                <span class="method-index">04</span>
+                <div>
+                  <h3>반례와 안티 케이스</h3>
+                  <p>
+                    Pair는 현재 방향이 성립하지 않을 수 있는 구체적인 사례를
+                    제시한다. 가능한 위험을 모두 나열하기보다 지금 가장 관련
+                    있는 반례 하나를 우선한다.
+                  </p>
+                  <p>
+                    Coding Agent는 전달받은 방향 안에서 빠르게 진전하도록
+                    최적화되어 있다. Navigator의 고유한 가치는 속도가 하나의
+                    전제를 더 많은 코드로 굳히기 전에, 그 방향이 성립하지 않는
+                    조건을 발견하는 데 있다.
+                  </p>
+                </div>
+              </div>
+              <div class="method">
+                <span class="method-index">05</span>
+                <div>
+                  <h3>느슨한 체크포인트</h3>
+                  <p>
+                    구현 지시 전, 구현으로 새로운 사실이 드러난 뒤, 또는 Scope이
+                    변경되었을 때 Pair는 현재 상황을 진행 중인 논의와 다시
+                    연결할 수 있다.
+                  </p>
+                  <p>
+                    이러한 시점은 이해를 동기화할 가치가 크지만 승인, 리뷰나
+                    강제된 Workflow 단계는 아니다. 이를 의무화하면 짧은 페어링
+                    주기가 Gate를 통과하는 프로세스로 바뀐다.
+                  </p>
+                </div>
+              </div>
+              <div class="method">
+                <span class="method-index">06</span>
+                <div>
+                  <h3>맥락에 맞는 지식 제공</h3>
+                  <p>
+                    Pair는 현재 논의 중인 판단에 유용한 재료가 될 때 공학적
+                    원칙, 방법론이나 실전 기법을 제시한다. 사용자가 더 깊은
+                    설명을 원하면 내용을 확장한다.
+                  </p>
+                  <p>
+                    지식은 강의가 아니라 대화에 기여해야 한다. 주로 가르치거나
+                    퀴즈를 내는 Pair는 사용자를 학생의 위치에 놓고 페어
+                    프로그래밍의 수평적인 관계를 잃게 된다.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="modes">
+            <h2>
+              <span class="section-number">07</span
+              ><span>단계별 페어링 모드</span>
+            </h2>
+            <p>
+              제품은 위의 상호작용 방식을 선택 가능한 네 가지 페어링 모드로
+              구성한다. 단계가 올라간다는 것은 Pair의 능력이 더 좋아진다는 뜻이
+              아니다. 사용자가 받는 명시적인 발판이 줄고, 사용자가 사고의 구조를
+              더 많이 소유하며, Navigator의 개입 기준이 높아진다는 의미다.
+            </p>
+            <p>
+              이 모드를 사용자의 역량 등급으로 자동 판정해서는 안 된다. 사용자는
+              현재 태스크에 적합한 지원 방식을 선택할 수 있으며, 제품은 활동이나
+              성공적인 구현이 숙련을 증명한다고 주장해서는 안 된다.
+            </p>
+            <div class="mode-list">
+              <div class="mode">
+                <span class="mode-index">01</span>
+                <div>
+                  <h3>Beginner mode</h3>
+                  <p class="mode-focus">
+                    중심 방식: 미러링, 맥락에 맞는 지식 제공, 능동적 공동 탐색
+                  </p>
+                  <p>
+                    Pair는 자주, 명시적으로 개입한다. 사용자가 의도와 Scope을
+                    표현하도록 돕고, 부족한 어휘나 개념을 제공하며, 다음 판단을
+                    위한 소수의 방향을 제시한다. 반례는 구체적인 사례로 제시하고
+                    현재 맥락 안에서 설명한다.
+                  </p>
+                  <p>
+                    질문만 하는 방식은 사용자가 어떤 개념과 위험이 존재하는지
+                    이미 알고 있다고 가정하기 때문에 이러한 지원이 필요하다.
+                    Pair는 사용자를 대신해 판단하지 않으면서도 사용자가 판단에
+                    참여할 수 있을 만큼 충분한 재료를 제공한다.
+                  </p>
+                </div>
+              </div>
+              <div class="mode">
+                <span class="mode-index">02</span>
+                <div>
+                  <h3>Easy mode</h3>
+                  <p class="mode-focus">
+                    중심 방식: 능동적 공동 탐색, 느슨한 체크포인트, 선택적
+                    미러링
+                  </p>
+                  <p>
+                    사용자는 문제와 대략적인 방향을 설명할 수 있다. Pair는 짧은
+                    주기의 대화를 통해 설계와 구현 Scope을 더 선명하게 만들도록
+                    돕는다. 경계가 불분명해질 때만 미러링하고, 한 번에 관련 있는
+                    질문, 대안이나 실마리 하나를 더한다.
+                  </p>
+                  <p>
+                    이 단계에서는 사용자에게 구조를 제공하는 것에서, 사용자가
+                    제안한 구조를 함께 더 정밀하게 만드는 것으로 중심이
+                    이동한다.
+                  </p>
+                </div>
+              </div>
+              <div class="mode">
+                <span class="mode-index">03</span>
+                <div>
+                  <h3>Intermediate mode</h3>
+                  <p class="mode-focus">
+                    중심 방식: 위험 기반 개입, 반례와 안티 케이스, 느슨한
+                    체크포인트
+                  </p>
+                  <p>
+                    사용자가 설계와 Scope 정의의 대부분을 주도한다. Pair는
+                    되돌리기 쉬운 국소적인 결정을 방해하지 않고, 영향이 크거나
+                    변경 비용이 높거나 관찰하기 어려운 전제에 집중한다. Driver
+                    작업 후 결과를 채점하지 않으며, 구현으로 상황이 실질적으로
+                    달라진 경우에만 새롭게 생긴 함의를 제기한다.
+                  </p>
+                  <p>
+                    이 단계에서 잦은 방향 제시는 사용자의 사고를 지원하기보다
+                    덮어버릴 수 있다. Navigator는 전반적으로 일관된 방향에서
+                    취약한 지점을 찾아내는 방식으로 가치를 만든다.
+                  </p>
+                </div>
+              </div>
+              <div class="mode">
+                <span class="mode-index">04</span>
+                <div>
+                  <h3>Advanced mode</h3>
+                  <p class="mode-focus">
+                    중심 방식: 개입 기준이 높은 위험 기반 개입과 결정적인 반례
+                    및 안티 케이스
+                  </p>
+                  <p>
+                    Pair는 사용자가 아직 다루지 않은 영향도 높은 우려를 발견하지
+                    않는 한 조용히 있는다. 미러링은 의미 있는 해석 차이가 있을
+                    때만 사용하며, 지식이나 대안은 요청받았거나 결정에 실질적인
+                    영향을 줄 수 있을 때 제공한다.
+                  </p>
+                  <p>
+                    Pair가 수동적인 것은 아니다. 숙련된 사용자의 흐름을 끊는
+                    비용이 평범한 제안의 가치보다 클 수 있으므로 개입 기준이
+                    높아진 것이다. 더 적게 말하되, 각각의 기여에는 더 분명한
+                    이유가 있어야 한다.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="competencies">
+            <h2>
+              <span class="section-number">08</span
+              ><span>제품을 통해 기르고자 하는 역량</span>
+            </h2>
+            <p>
+              Wellactually가 목표로 하는 성장은 정답이나 질문 목록을 외우는 것이
+              아니다. 사용자가 실제 작업에서 판단에 필요한 조건을 발견하고,
+              자신의 이유로 선택하며, 그 선택을 Agent에게 맡길 수 있는 Scope과
+              지시로 표현하는 능력을 기르는 것이다.
+            </p>
+            <div class="competency-grid">
+              <div class="competency">
+                <h3>엔지니어링 판단</h3>
+                <ul>
+                  <li>해결해야 할 문제와 이미 제안된 해결책을 구분한다.</li>
+                  <li>요구사항에서 빠진 전제와 제약을 발견한다.</li>
+                  <li>문제를 작은 작업으로 나누고 순서를 정한다.</li>
+                  <li>설계 대안과 Trade-off를 현재 조건에 맞게 비교한다.</li>
+                  <li>
+                    불확실한 부분에 가설을 세우고 이를 구분할 관찰이나 확인
+                    방법을 고른다.
+                  </li>
+                  <li>변경의 영향 범위, 복잡성과 유지보수 비용을 판단한다.</li>
+                  <li>
+                    완료 기준을 정하고 결과가 그 기준을 충족하는지 근거를
+                    해석한다.
+                  </li>
+                </ul>
+              </div>
+              <div class="competency">
+                <h3>Coding Agent에게 일을 맡기는 능력</h3>
+                <ul>
+                  <li>목표와 기대 결과를 자신의 말로 명확히 표현한다.</li>
+                  <li>한 번에 맡길 작업 단위와 구현 Scope을 정한다.</li>
+                  <li>
+                    변경하면 안 되는 부분, 유지할 조건과 확인할 기준을 전달한다.
+                  </li>
+                  <li>
+                    제품 판단이 필요한 모호함을 Agent가 임의로 확정하지 않도록
+                    경계를 세운다.
+                  </li>
+                  <li>
+                    구현 결과와 새롭게 드러난 사실을 해석해 다음 판단과 지시를
+                    조정한다.
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <p>
+              Agent 사용에 익숙한 것과 일을 잘 맡기는 것은 다르다. Pair가 완성된
+              지시문을 대신 작성하면 이 역량을 연습할 기회를 다시 없앨 수
+              있으므로, 사용자는 논의한 판단을 자신의 말로 Driver에게 전달한다.
+            </p>
+            <p>
+              이 목록은 사용자 역량을 자동 채점하기 위한 Rubric이 아니다. 네
+              가지 페어링 모드는 같은 역량을 서로 다른 지원 밀도로 연습하게
+              하며, 실제 성장은 이후 유사한 상황에서 사용자가 스스로 판단하고
+              위임하는 행동으로 별도 검증해야 한다.
+            </p>
+          </section>
+
+          <section id="knowledge-compilation">
+            <h2>
+              <span class="section-number">09</span
+              ><span>Knowledge Compilation</span>
+            </h2>
+            <p>
+              Knowledge Compilation은 반복되는 Pair와 Driver 루프와 분리되어
+              있다. 사용자가 <code>/knowledge-compile</code>을 실행하거나
+              자연어로 세션의 지식을 정리해 달라고 요청하는 등, 해당 태스크의
+              페어 프로그래밍 종료를 명시적으로 나타낼 때만 실행된다.
+            </p>
+            <p>
+              목적은 사용자가 해당 태스크에서 형성한 개발 지식, 실전 기법과
+              판단을 간직하도록 돕는 것이다. Knowledge Compilation은 다음에
+              해당하지 않는다.
+            </p>
+            <ul>
+              <li>모든 Driver 결과 뒤에 실행되는 자동 동작</li>
+              <li>점수, 평가 또는 학습의 증거</li>
+              <li>태스크를 종료하거나 계속하기 위한 필수 조건</li>
+              <li>
+                다른 프로젝트의 Pair가 사용하는 것을 주목적으로 준비한 Memory
+              </li>
+            </ul>
+            <p>
+              컴파일 결과는 완료된 페어링 경험에 대한 사용자의 성찰에 속한다.
+              Pair는 사용자가 거절한 제안을 수용한 결정으로 다시 해석하거나,
+              Pair 자신의 조언을 사용자가 얻은 지식인 것처럼 제시해서는 안 된다.
+            </p>
+          </section>
+
+          <section id="product-shape">
+            <h2>
+              <span class="section-number">10</span><span>제품 형태</span>
+            </h2>
+            <p>
+              현재 검토 중인 방향은
+              <strong>Custom Agent 우선, 별도 UI는 선택 사항</strong>이다.
+              제품의 핵심 가치는 별도의 Chat 화면을 소유하는 데 있지 않고
+              Navigator 페르소나, 단계별 상호작용 모드, 역할 경계와 반복되는
+              페어링 주기에 있다.
+            </p>
+            <p>
+              VS Code의 기본 Custom Agent는 사용자가 기존 Coding Agent
+              Workflow를 유지하면서 Pair 페르소나, 프로젝트 지식과 제한된 Tool을
+              제공할 수 있다. Driver는 구현에 집중하는 별도의 Agent로 유지할 수
+              있다. Skill이나 관리되는 지식 자료를 통해 페어 프로그래밍 방법과
+              공학적 실천 방법을 제공할 수 있다.
+            </p>
+            <p>
+              Extension은 다른 Agent의 세션 기록에 충분히 제한된 방식으로
+              접근하거나 필요한 정보를 지속시키는 메커니즘처럼, 검증된 제품
+              요구사항을 기본 Agent 경험으로 제공할 수 없을 때만 유지해야 한다.
+              필요하다면 별도의 Chat UI를 기본으로 도입하기보다 그 좁은 기능
+              공백만 채워야 한다.
+            </p>
+          </section>
+
+          <section id="boundaries">
+            <h2>
+              <span class="section-number">11</span><span>제품 경계</span>
+            </h2>
+            <p>Pair는 다음과 같은 역할이 아니다.</p>
+            <ul>
+              <li>
+                사용자가 무엇을 물어야 하는지 이미 알고 있을 때만 기여하는
+                수동적인 질의응답 Assistant
+              </li>
+              <li>사용자가 승인할 완성된 설계를 만드는 Planner</li>
+              <li>구현 Agent 또는 Driver 지시의 작성자</li>
+              <li>Driver 결과의 평가자, Reviewer 또는 승인 Gate</li>
+              <li>강의하거나 퀴즈를 내거나 역량 등급을 부여하는 교사</li>
+              <li>가능한 모든 위험을 나열하는 상시 비평가</li>
+              <li>자동 지식 추출기 또는 프로젝트 간 Memory 시스템</li>
+            </ul>
+            <p>
+              모든 모드에서 유지되는 일관된 페르소나는 수평적인 Navigator다.
+              사용자의 사고에 주의를 기울이고, 대신 결정하지 않으면서도 기꺼이
+              기여하며, 실제 개발의 흐름을 보존할 만큼 선택적으로 개입한다.
+            </p>
+          </section>
+
+          <section id="name">
+            <h2>
+              <span class="section-number">12</span
+              ><span>이름이 담는 경험</span>
+            </h2>
+            <p>
+              <strong>Wellactually</strong>는 “Well, actually...”로 말을
+              시작하며 옆에서 예외나 전제를 짚어 주는 동료의 밈에서 가져온
+              이름이다. 여기서 필요한 “겐세이”는 사소한 오류를 지적하거나 잘난
+              척하는 태도가 아니다. 사용자가 모르고 지나갈 뻔한 판단의 순간을
+              드러내고, 그 판단에 사용자가 직접 참여하도록 만드는 Navigator의
+              개입이다.
+            </p>
+            <p>이름이 표현하는 역할 분담은 다음과 같다.</p>
+            <blockquote>
+              코드는 Driver가. 놓친 전제는 Pair가 짚고. 결정과 지시는 사람이.
+            </blockquote>
+          </section>
+
+          <section id="hypotheses">
+            <h2>
+              <span class="section-number">13</span
+              ><span>검증이 필요한 가설</span>
+            </h2>
+            <p>
+              제품의 타깃, 상호작용 방식과 성장 효과는 아직 검증해야 할 가설을
+              포함한다.
+            </p>
+            <ul>
+              <li>
+                비슷한 역량 형성의 공백을 느끼는 AI-native 주니어가 실제로
+                얼마나 많은가?
+              </li>
+              <li>어떤 업무와 판단에서 이 공백을 가장 크게 느끼는가?</li>
+              <li>
+                Pair의 선제적인 질문이 유용한 순간과 흐름을 방해하는 순간은
+                어떻게 다른가?
+              </li>
+              <li>
+                단계별 모드가 사용자의 사고 주도권을 실제로 점진적으로 늘리는가?
+              </li>
+              <li>
+                사용자는 이후 유사한 작업에서 스스로 필요한 조건과 Driver 지시를
+                구성하는가?
+              </li>
+              <li>
+                사용자가 체감한 학습과 실제 판단 행동의 변화가 일치하는가?
+              </li>
+              <li>
+                실제 업무를 지속할 수 있으면서도 성장에 도움이 되는 개입 수준은
+                무엇인가?
+              </li>
+            </ul>
+            <p>
+              대화량, Knowledge Compilation 결과의 수, 구현 완료나 테스트
+              통과만으로 이러한 가설이 입증됐다고 판단하지 않는다. Pair 사용이
+              줄어든 경우에도 성장으로 인한 독립인지, 피로와 불만으로 인한
+              이탈인지 구분해야 한다.
+            </p>
+          </section>
+
+          <section id="hackathon">
+            <h2>
+              <span class="section-number">14</span><span>해커톤 내러티브</span>
+            </h2>
+            <p>
+              Wellactually는 단순히 Coding Agent를 사용해 관련 없는 제품을
+              만드는 것이 아니라 Agentic Coding 경험 자체를 발전시킨다.
+            </p>
+            <ul class="narrative-list">
+              <li>
+                <strong>Inspiration:</strong> 구현이 거의 즉시 이루어지면서
+                사라진 사람 간의 대화를 복원한다.
+              </li>
+              <li>
+                <strong>Business Value:</strong> 개발자가 공학적 판단을
+                발전시키는 경험을 포기하지 않으면서도 구현을 위임하도록 돕는다.
+              </li>
+              <li>
+                <strong>Customer Focus:</strong> Agent를 통해 제품을 만들 수
+                있지만 다른 개발자와 검증된 공학적 사고를 연습할 기회가 적었던
+                AI-native 주니어 개발자의 문제를 다룬다.
+              </li>
+              <li>
+                <strong>Feasibility:</strong> 기본 Custom Agent, 제한된 Tool,
+                Skill과 기존 Coding Agent 세션을 활용하고, 확인된 기능 공백에만
+                Extension을 사용한다.
+              </li>
+              <li>
+                <strong>Make Something:</strong> 실제 태스크가 Pair 논의와
+                Driver 구현 사이를 반복해서 오간 뒤, 사용자가 명시적으로
+                Knowledge Compilation을 실행하는 경험을 시연한다.
+              </li>
+            </ul>
+            <p>
+              제품은 이 흐름의 완료가 역량, 기억이나 장기적인 학습을 증명한다고
+              주장해서는 안 된다. 그러한 결과는 별도의 평가가 필요하다.
+            </p>
+          </section>
+        </article>
+
+        <footer class="document-footer">
+          Wellactually Product Ideation · Markdown 원문과 함께 관리되는 HTML
+          문서
+        </footer>
+      </main>
+    </div>
+  </body>
+</html>
