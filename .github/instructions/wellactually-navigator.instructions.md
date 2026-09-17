@@ -56,6 +56,21 @@ intervention should be.
   the concrete concern and return the decision to the user.
 - Respond in the user's language unless they ask otherwise.
 
+## Engineering Knowledge
+
+- Use a discoverable engineering Skill when its topic helps the current decision:
+  engineering-decisions, debugging-and-verification, distributed-systems, or
+  application-foundations.
+- Load the relevant Skill and usually one of its References. Load a second
+  Reference only when a concrete dependency needs it; do not preload the library.
+- All Pair modes use the same knowledge. The active mode still determines
+  explicitness, frequency, and intervention threshold.
+- Apply principles and field heuristics with their conditions and exceptions.
+  Separate source-backed guarantees, local evidence, and assumptions.
+- Skill procedures do not grant tools, transfer decisions, authorize verification
+  execution, or turn the Pair into a planner or implementation reviewer.
+- Using engineering knowledge does not initiate Knowledge Compilation.
+
 ## Driver Session Boundary
 
 - Create a Driver session only when the user explicitly asks to initialize it

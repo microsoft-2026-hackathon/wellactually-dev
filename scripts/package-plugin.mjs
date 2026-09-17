@@ -6,13 +6,14 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const repositoryRoot = realpathSync(resolve(dirname(fileURLToPath(import.meta.url)), ".."));
 const targetArgument = process.argv[2];
 
 if (!targetArgument) {
@@ -20,13 +21,33 @@ if (!targetArgument) {
   process.exit(1);
 }
 
-const targetRoot = resolve(process.cwd(), targetArgument);
-if (targetRoot === repositoryRoot) {
-  console.error("The target directory must be separate from wellactually-dev.");
+function canonicalPath(filePath) {
+  if (existsSync(filePath)) return realpathSync(filePath);
+  return join(canonicalPath(dirname(filePath)), basename(filePath));
+}
+
+function containsPath(parent, child) {
+  const difference = relative(parent, child);
+  return difference === "" ||
+    (!isAbsolute(difference) && difference !== ".." && !difference.startsWith(`..${sep}`));
+}
+
+function markdownFiles(directory) {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const entryPath = join(directory, entry.name);
+    if (entry.isDirectory()) return markdownFiles(entryPath);
+    return entry.isFile() && entry.name.endsWith(".md") ? [entryPath] : [];
+  });
+}
+
+const targetRoot = canonicalPath(resolve(process.cwd(), targetArgument));
+if (containsPath(repositoryRoot, targetRoot) || containsPath(targetRoot, repositoryRoot)) {
+  console.error("The target directory must not overlap wellactually-dev.");
   process.exit(1);
 }
 
 const sourceAgentRoot = join(repositoryRoot, ".github", "agents");
+const sourceSkillRoot = join(repositoryRoot, ".github", "skills");
 const sourceInstruction = join(
   repositoryRoot,
   ".github",
@@ -36,11 +57,29 @@ const sourceInstruction = join(
 const targetCopilotRoot = join(targetRoot, "com.github.copilot");
 const targetAgentRoot = join(targetCopilotRoot, "agents");
 const targetRuleRoot = join(targetCopilotRoot, "rules");
+const targetSkillRoot = join(targetRoot, "skills");
+const skillNames = readdirSync(sourceSkillRoot, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => entry.name)
+  .sort();
+
+for (const skillName of skillNames) {
+  if (!existsSync(join(sourceSkillRoot, skillName, "SKILL.md"))) {
+    console.error(`${skillName} is missing SKILL.md`);
+    process.exit(1);
+  }
+}
 
 mkdirSync(targetRoot, { recursive: true });
 rmSync(targetCopilotRoot, { recursive: true, force: true });
+rmSync(targetSkillRoot, { recursive: true, force: true });
 mkdirSync(targetAgentRoot, { recursive: true });
 mkdirSync(targetRuleRoot, { recursive: true });
+mkdirSync(targetSkillRoot, { recursive: true });
+
+for (const skillName of skillNames) {
+  cpSync(join(sourceSkillRoot, skillName), join(targetSkillRoot, skillName), { recursive: true });
+}
 
 const agentFiles = readdirSync(sourceAgentRoot)
   .filter((fileName) => fileName.endsWith(".agent.md"))
@@ -78,11 +117,12 @@ if (packagedAgents.length !== 5) {
   failures.push(`expected 5 agents, found ${packagedAgents.length}`);
 }
 
-for (const fileName of packagedAgents) {
-  const content = readFileSync(join(targetAgentRoot, fileName), "utf8");
-  for (const match of content.matchAll(/\]\((\.\.\/[^)]+)\)/g)) {
-    if (!existsSync(resolve(targetAgentRoot, match[1]))) {
-      failures.push(`${fileName} has a broken reference: ${match[1]}`);
+for (const filePath of [...markdownFiles(targetCopilotRoot), ...markdownFiles(targetSkillRoot)]) {
+  const content = readFileSync(filePath, "utf8");
+  for (const match of content.matchAll(/\]\((\.{1,2}\/[^)]+)\)/g)) {
+    const destination = resolve(dirname(filePath), match[1].split("#")[0]);
+    if (!containsPath(targetRoot, destination) || !existsSync(destination)) {
+      failures.push(`${relative(targetRoot, filePath)} has a broken reference: ${match[1]}`);
     }
   }
 }
@@ -92,4 +132,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log(`Packaged Wellactually ${manifest.version} with ${packagedAgents.length} agents to ${targetRoot}`);
+console.log(`Packaged Wellactually ${manifest.version} with ${packagedAgents.length} agents and ${skillNames.length} skills to ${targetRoot}`);

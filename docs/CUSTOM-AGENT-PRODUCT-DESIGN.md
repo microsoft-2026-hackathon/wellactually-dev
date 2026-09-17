@@ -207,24 +207,43 @@ Driver에는 Workspace 읽기와 검색, 코드 편집, 명령 실행 및 검증
 
 ## 5. Skills
 
-MVP에서 제공할 주요 Skill은 `knowledge-compile`이다. 사용자가
-`/knowledge-compile`을 실행하거나 세션 지식 정리를 명시적으로 요청했을 때만
-사용한다.
+공학 지식은 네 개의 Skill과 열두 개의 Reference로 제공한다. Skill은 현재
+문제에 맞는 자료를 선택하는 진입점이고, Reference는 접근 방법, 불변식,
+Trade-off, 실패 메커니즘, 안티패턴, 조건과 예외가 있는 실전 휴리스틱을 담는다.
+
+| Skill | Reference 주제 |
+| --- | --- |
+| [engineering-decisions](../.github/skills/engineering-decisions/SKILL.md) | 문제 정의, 설계 Trade-off |
+| [debugging-and-verification](../.github/skills/debugging-and-verification/SKILL.md) | 디버깅 추론, 검증 전략 |
+| [distributed-systems](../.github/skills/distributed-systems/SKILL.md) | 캐시·정합성, 동시성·조정, 트랜잭션, 비동기 메시징, 네트워크 실패 |
+| [application-foundations](../.github/skills/application-foundations/SKILL.md) | 인증·인가, 데이터 모델링, 설정·환경 |
+
+개발 정본은 `.github/skills/<name>/SKILL.md`와 같은 폴더의 `references/`에
+둔다. 배포 시 폴더 내부 구조를 유지해 Plugin 루트의 `skills/`로 복사한다.
+각 공학 Skill은 다음 호출 설정을 사용한다.
 
 ```yaml
----
-name: knowledge-compile
-description: "완료한 페어링 경험에서 사용자가 형성한 지식과 판단을 정리할 때 사용"
-user-invocable: true
-disable-model-invocation: true
----
+user-invocable: false
+disable-model-invocation: false
 ```
 
-`disable-model-invocation: true`로 설정해 Pair가 임의로 실행하지 못하게 한다.
+Slash command로 노출하지 않고, 모델이 설명을 바탕으로 필요한 Skill을 선택한다.
+보통 관련 Reference 하나만 읽고 구체적인 의존 관계가 있을 때만 두 번째를 읽는다.
+처음부터 전체 지식 자료를 로드하지 않는다.
 
-추후에는 설계 Trade-off 탐색, 디버깅 가설 수립, 마이그레이션 위험 탐색처럼
-반복 가능한 공학적 절차를 Skill로 추가할 수 있다. 이러한 Skill은 Pair의 기본
-성격을 바꾸지 않고 필요할 때만 지식과 절차를 제공해야 한다.
+네 Pair mode는 같은 지식을 사용한다. 표현의 구체성, 빈도와 개입 기준은 기존
+mode가 결정한다. Skill은 사용자 결정을 대신하거나 Driver 프롬프트를 작성하지
+않으며, Pair에게 편집·실행·검증 권한을 부여하지 않는다. Driver가 자료를
+발견하더라도 현재 Agent의 역할과 도구 범위는 바뀌지 않는다.
+
+공식 자료가 설명하는 보장과 실무적 종합 판단을 구분한다. Reference는 일반적으로
+200~500줄을 목표로 하되 분량이나 문구 검사를 의미적 정확성의 증거로 삼지 않는다.
+파일 구성, 호출 설정, 링크와 패키징 검사는 구조적 검증이며, 실제 대화에서의
+자료 선택과 지식 적용은 별도 시나리오 검증 대상이다.
+
+`knowledge-compile`은 마지막 기능으로 보류하며 현재 패키지에 포함하지 않는다.
+향후 구현하더라도 `/knowledge-compile` 또는 명시적인 지식 정리 요청에만 반응한다.
+일반 공학 Skill을 사용했다고 자동 실행하지 않는다.
 
 ## 6. MCP
 
@@ -278,6 +297,6 @@ Hooks를 추가할 경우 작은 감사 가능한 스크립트로 유지하고, 
 - 하나의 공통 Navigator Instructions
 - Pair의 읽기 전용 Workspace 및 Agent Host 세션 도구
 - Driver의 구현 및 검증 도구
-- 사용자가 명시적으로 실행하는 `knowledge-compile` Skill
+- 필요할 때 읽는 네 공학 Skill과 열두 Reference
 - 기본 Chat View에서 같은 Workspace를 사용하는 독립 Pair·Driver Agent Host 세션
 - 사용자가 직접 수행하는 Driver 선택과 구현 지시

@@ -9,8 +9,9 @@ Wellactually는 개발 정본과 사용자 배포본을 별도 저장소로 관�
 | `microsoft-2026-hackathon/wellactually-dev` | 제품 문서, 로컬 검증용 Workspace Customization과 패키징 스크립트의 정본 |
 | `microsoft-2026-hackathon/wellactually`     | 사용자가 설치하는 Agent Plugin 1.0 배포본                               |
 
-개발 저장소의 `.github/agents`와 `.github/instructions`를 직접 수정한다. 배포
-저장소의 Agent와 rule은 패키징 스크립트가 생성하며 직접 수정하지 않는다.
+개발 저장소의 `.github/agents`, `.github/instructions`, `.github/skills`를 직접
+수정한다. 배포 저장소의 Agent, rule과 Skill은 패키징 스크립트가 생성하며 직접
+수정하지 않는다.
 
 ## 개발 저장소
 
@@ -26,13 +27,19 @@ wellactually-dev/
 │  │  ├─ intermediate.agent.md
 │  │  ├─ advanced.agent.md
 │  │  └─ wellactually-driver.agent.md
-│  └─ instructions/
-│     └─ wellactually-navigator.instructions.md
+│  ├─ instructions/
+│  │  └─ wellactually-navigator.instructions.md
+│  └─ skills/
+│     ├─ engineering-decisions/
+│     ├─ debugging-and-verification/
+│     ├─ distributed-systems/
+│     └─ application-foundations/
 ├─ packaging/
 │  ├─ plugin.json
 │  └─ README.md
 └─ scripts/
-   └─ package-plugin.mjs
+   ├─ package-plugin.mjs
+   └─ package-plugin.test.mjs
 ```
 
 이 구조에서는 개발 저장소를 VS Code로 열기만 하면 Agent 선택기에 변경 사항이
@@ -53,8 +60,21 @@ node scripts/package-plugin.mjs ../wellactually-plugin
 1. `.github/agents`의 다섯 Agent를 `com.github.copilot/agents`로 복사한다.
 2. Agent의 공통 Instructions 참조를 Plugin의 `rules` 경로로 변환한다.
 3. Navigator Instructions를 `com.github.copilot/rules`로 복사한다.
-4. `packaging/plugin.json`과 `packaging/README.md`를 배포 저장소 루트로 복사한다.
-5. manifest, Agent 수와 상대 rule 링크를 검증한다.
+4. `.github/skills`의 네 Skill을 루트 `skills/`로 복사한다. 각 `SKILL.md`와
+   `references/`의 원문 및 상대 경로를 유지한다.
+5. `packaging/plugin.json`과 `packaging/README.md`를 배포 저장소 루트로 복사한다.
+6. manifest, Agent 수, Skill 진입점과 문서의 `./`, `../` 파일 링크를 검증한다.
+
+출력 경로는 개발 저장소의 내부나 상위 디렉터리가 될 수 없다. 출력의
+`com.github.copilot/`과 `skills/`는 생성 전용으로 매번 다시 만들며 오래된 파일도
+제거한다. 이 폴더에 수동 파일을 두지 않는다. 출력 루트의 `.git`과 그 밖의
+비관리 파일은 보존하며 `plugin.json`과 `README.md`는 템플릿으로 덮어쓴다.
+
+한국어 사용 설명서의 정본은 [packaging/README.md](../packaging/README.md)다.
+설치 패키지 루트의 `README.md`로 포함되며 Plugin의 `homepage`는
+[온라인 사용 설명서](https://github.com/microsoft-2026-hackathon/wellactually#readme)를
+가리킨다. 모드 선택, Pair·Driver 사용 흐름, 업데이트와 문제 해결 안내는 이
+정본에서 함께 관리한다.
 
 생성 결과는 다음과 같다.
 
@@ -62,6 +82,11 @@ node scripts/package-plugin.mjs ../wellactually-plugin
 wellactually/
 ├─ plugin.json
 ├─ README.md
+├─ skills/
+│  ├─ engineering-decisions/
+│  ├─ debugging-and-verification/
+│  ├─ distributed-systems/
+│  └─ application-foundations/
 └─ com.github.copilot/
    ├─ agents/
    │  ├─ beginner.agent.md
@@ -73,8 +98,19 @@ wellactually/
       └─ wellactually-navigator.instructions.md
 ```
 
-`knowledge-compile`을 구현하면 개발 저장소의 `skills/knowledge-compile`을 배포
-저장소의 같은 경로로 복사하도록 스크립트를 확장한다.
+각 Skill은 `SKILL.md`와 `references/`를 포함한다. 총 열두 Reference를 제공하며
+`user-invocable: false`, `disable-model-invocation: false`로 필요할 때 모델이
+선택하도록 설정한다. `knowledge-compile`은 보류하며 현재 패키지에는 없다.
+
+로컬 패키징 검증은 Node.js 20 이상에서 실행한다. 별도 의존성 설치는 필요 없다.
+
+```bash
+node --test scripts/package-plugin.test.mjs
+```
+
+테스트는 임시 디렉터리에서 원문 보존, 호출 설정, 반복 실행, 오래된 산출물 정리,
+잘못된 경로와 링크를 검사한다. 실제 VS Code의 Skill 발견과 대화 중 자료 선택·적용
+품질은 별도 시나리오 검증이 필요하다.
 
 ## Git 저장소에서 직접 설치
 
@@ -104,21 +140,25 @@ wellactually/
 
 - `.github/agents/**`
 - `.github/instructions/**`
+- `.github/skills/**`
 - `packaging/**`
 - `scripts/package-plugin.mjs`
+- `scripts/package-plugin.test.mjs`
 - 동기화 workflow 자체
 
-Workflow는 `WELLACTUALLY_PLUGIN_TOKEN` repository secret으로 배포 저장소를
+Workflow는 패키징 테스트를 먼저 실행한다. `WELLACTUALLY_PLUGIN_TOKEN` repository secret으로 배포 저장소를
 checkout하고, 패키징 스크립트를 실행한 뒤 결과가 달라졌을 때만 배포 저장소
-`main`에 commit한다. 실행마다 `git push --dry-run`으로 PAT의 쓰기 권한도
-확인한다. 개발 저장소의 기본 `GITHUB_TOKEN` 권한은 `contents: read`로 제한한다.
+`main`에 commit한다. `git push --dry-run`은 게시 접근 사전 검사이며 실제 갱신 시
+적용되는 모든 서버 정책의 통과를 보장하지 않는다. PAT에는 대상 저장소 쓰기 권한과
+필요한 조직 승인이 있어야 한다. 개발 저장소의 기본 `GITHUB_TOKEN` 권한은
+`contents: read`로 제한한다.
 
 자동 동기화가 필요하지만 관련 파일 변경이 없는 경우에는 GitHub Actions의
 **Run workflow**로 `workflow_dispatch` 실행을 시작할 수 있다.
 
 Release는 다음 순서로 진행한다.
 
-1. 개발 저장소에서 Agent와 Instructions 변경을 완료하고 검증한다.
+1. 개발 저장소에서 Agent, Instructions와 Skill 변경을 완료하고 검증한다.
 2. `packaging/plugin.json`의 버전을 Semantic Versioning에 따라 올린다.
 3. 변경을 개발 저장소 `main`에 merge한다.
 4. `Sync Agent Plugin` workflow가 성공했는지 확인한다.
@@ -165,6 +205,8 @@ Wellactually를 설치할 수 있다.
 
 - 개발 저장소의 `.github/agents`에 다섯 Agent가 있다.
 - 네 Pair mode가 공통 Navigator Instructions를 참조한다.
+- 네 공학 Skill과 열두 Reference가 패키지에 원문 그대로 포함된다.
+- 패키징 테스트를 통과하고 설치된 환경에서 관련 Skill 발견·선택을 확인했다.
 - 배포 저장소의 `plugin.json` 이름과 버전이 release와 일치한다.
 - 배포 저장소 Agent의 `../rules` 참조가 유효하다.
 - Pair mode에는 편집, 명령 실행과 세션 메시지 전송 도구가 없다.

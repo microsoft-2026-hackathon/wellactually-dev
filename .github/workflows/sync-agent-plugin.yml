@@ -7,8 +7,10 @@ on:
     paths:
       - .github/agents/**
       - .github/instructions/**
+      - .github/skills/**
       - packaging/**
       - scripts/package-plugin.mjs
+      - scripts/package-plugin.test.mjs
       - .github/workflows/sync-agent-plugin.yml
   workflow_dispatch:
 
@@ -33,6 +35,9 @@ jobs:
           git -C source remote add origin "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
           git -C source fetch --depth=1 origin "$GITHUB_SHA"
           git -C source checkout --detach FETCH_HEAD
+
+      - name: Test plugin packaging
+        run: node --test source/scripts/package-plugin.test.mjs
 
       - name: Check out plugin repository
         shell: bash
