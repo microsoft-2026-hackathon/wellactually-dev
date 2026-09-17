@@ -24,6 +24,9 @@ instructions directly to the separate Wellactually Driver session.
 2. Enter `https://github.com/microsoft-2026-hackathon/wellactually.git`.
 3. Confirm the installation and select a Wellactually Pair mode in Chat.
 
+The plugin repository is public, so users do not need to clone it or request
+repository access before installing.
+
 ## Use
 
 Start with one of the four Pair modes in the default Chat View. Discuss the

@@ -1,0 +1,106 @@
+name: Sync Agent Plugin
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/agents/**
+      - .github/instructions/**
+      - packaging/**
+      - scripts/package-plugin.mjs
+      - .github/workflows/sync-agent-plugin.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-wellactually-agent-plugin
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    name: Package and publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out development source
+        shell: bash
+        run: |
+          git init source
+          git -C source remote add origin "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
+          git -C source fetch --depth=1 origin "$GITHUB_SHA"
+          git -C source checkout --detach FETCH_HEAD
+
+      - name: Check out plugin repository
+        shell: bash
+        env:
+          PLUGIN_TOKEN: ${{ secrets.WELLACTUALLY_PLUGIN_TOKEN }}
+        run: |
+          test -n "$PLUGIN_TOKEN"
+          cleanup_credentials() {
+            rm -f "$HOME/.git-credentials"
+            git config --global --unset credential.helper || true
+          }
+          trap cleanup_credentials EXIT
+          git config --global credential.helper store
+          printf 'https://x-access-token:%s@github.com\n' "$PLUGIN_TOKEN" > "$HOME/.git-credentials"
+          chmod 600 "$HOME/.git-credentials"
+          git clone --branch main --single-branch \
+            https://github.com/microsoft-2026-hackathon/wellactually.git plugin
+
+      - name: Package plugin
+        run: node source/scripts/package-plugin.mjs plugin
+
+      - name: Verify publish access
+        shell: bash
+        env:
+          PLUGIN_TOKEN: ${{ secrets.WELLACTUALLY_PLUGIN_TOKEN }}
+        run: |
+          cleanup_credentials() {
+            rm -f "$HOME/.git-credentials"
+            git config --global --unset credential.helper || true
+          }
+          trap cleanup_credentials EXIT
+          git config --global credential.helper store
+          printf 'https://x-access-token:%s@github.com\n' "$PLUGIN_TOKEN" > "$HOME/.git-credentials"
+          chmod 600 "$HOME/.git-credentials"
+          git -C plugin push --dry-run origin HEAD:main
+
+      - name: Detect package changes
+        id: changes
+        shell: bash
+        run: |
+          if [[ -n "$(git -C plugin status --porcelain)" ]]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit package changes
+        if: steps.changes.outputs.changed == 'true'
+        shell: bash
+        env:
+          PLUGIN_TOKEN: ${{ secrets.WELLACTUALLY_PLUGIN_TOKEN }}
+        run: |
+          cleanup_credentials() {
+            rm -f "$HOME/.git-credentials"
+            git config --global --unset credential.helper || true
+          }
+          trap cleanup_credentials EXIT
+          git config --global credential.helper store
+          printf 'https://x-access-token:%s@github.com\n' "$PLUGIN_TOKEN" > "$HOME/.git-credentials"
+          chmod 600 "$HOME/.git-credentials"
+          git -C plugin add -A
+          git -C plugin diff --cached --check
+          git -C plugin config user.name "github-actions[bot]"
+          git -C plugin config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          short_sha="${GITHUB_SHA:0:7}"
+          git -C plugin commit -m "chore: sync plugin from wellactually-dev@${short_sha}"
+          git -C plugin push origin HEAD:main
+
+      - name: Report no changes
+        if: steps.changes.outputs.changed == 'false'
+        run: echo "The published plugin already matches wellactually-dev."

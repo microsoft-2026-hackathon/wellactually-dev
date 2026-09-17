@@ -4,10 +4,10 @@
 
 Wellactually는 개발 정본과 사용자 배포본을 별도 저장소로 관리한다.
 
-| 저장소 | 역할 |
-| --- | --- |
+| 저장소                                      | 역할                                                                    |
+| ------------------------------------------- | ----------------------------------------------------------------------- |
 | `microsoft-2026-hackathon/wellactually-dev` | 제품 문서, 로컬 검증용 Workspace Customization과 패키징 스크립트의 정본 |
-| `microsoft-2026-hackathon/wellactually` | 사용자가 설치하는 Agent Plugin 1.0 배포본 |
+| `microsoft-2026-hackathon/wellactually`     | 사용자가 설치하는 Agent Plugin 1.0 배포본                               |
 
 개발 저장소의 `.github/agents`와 `.github/instructions`를 직접 수정한다. 배포
 저장소의 Agent와 rule은 패키징 스크립트가 생성하며 직접 수정하지 않는다.
@@ -94,16 +94,35 @@ wellactually/
 6. Chat 설정의 **Plugins** 또는 Extensions의 **Agent Plugins - Installed**에서
    `wellactually`가 활성화됐는지 확인한다.
 
-배포 저장소가 비공개인 동안에는 해당 저장소를 읽을 수 있는 GitHub 인증이
-필요하다.
+배포 저장소는 public이므로 설치 과정에서 저장소 읽기 권한이나 조직 인증이
+필요하지 않다.
 
 ## Release 절차
 
+개발 저장소 `main`의 다음 경로가 변경되면
+`Sync Agent Plugin` GitHub Actions workflow가 자동으로 실행된다.
+
+- `.github/agents/**`
+- `.github/instructions/**`
+- `packaging/**`
+- `scripts/package-plugin.mjs`
+- 동기화 workflow 자체
+
+Workflow는 `WELLACTUALLY_PLUGIN_TOKEN` repository secret으로 배포 저장소를
+checkout하고, 패키징 스크립트를 실행한 뒤 결과가 달라졌을 때만 배포 저장소
+`main`에 commit한다. 실행마다 `git push --dry-run`으로 PAT의 쓰기 권한도
+확인한다. 개발 저장소의 기본 `GITHUB_TOKEN` 권한은 `contents: read`로 제한한다.
+
+자동 동기화가 필요하지만 관련 파일 변경이 없는 경우에는 GitHub Actions의
+**Run workflow**로 `workflow_dispatch` 실행을 시작할 수 있다.
+
+Release는 다음 순서로 진행한다.
+
 1. 개발 저장소에서 Agent와 Instructions 변경을 완료하고 검증한다.
 2. `packaging/plugin.json`의 버전을 Semantic Versioning에 따라 올린다.
-3. 패키징 스크립트를 배포 저장소에 실행한다.
-4. 배포 저장소의 diff가 생성된 파일만 포함하는지 검토한다.
-5. 배포 저장소 `main`에 commit하고 push한다.
+3. 변경을 개발 저장소 `main`에 merge한다.
+4. `Sync Agent Plugin` workflow가 성공했는지 확인한다.
+5. 배포 저장소의 자동 생성 commit과 Plugin 구조를 검토한다.
 6. 배포 버전과 같은 immutable Git tag를 생성하고 push한다.
 7. 새 VS Code 환경에서 `Chat: Install Plugin From Source`로 smoke test한다.
 
@@ -123,15 +142,15 @@ Wellactually를 설치할 수 있다.
 
 ### 공개 등록 준비
 
-- 배포 저장소를 public으로 전환한다.
+- 배포 저장소 공개 전환을 유지한다.
 - 저장소에 배포에 적합한 License를 추가하고 `plugin.json`에 SPDX identifier를
   기록한다.
 - 유효한 Semantic Version, immutable release tag와 full commit SHA를 준비한다.
 - Plugin 이름, 설명, author, repository와 lowercase keyword를 확인한다.
 - 소스 설치 후 다섯 Agent 발견 및 핵심 Pair·Driver 흐름을 검증한다.
 
-License 선택과 저장소 공개 전환은 별도 제품·법무 결정이다. 결정 전에는 비공개
-소스 설치까지만 지원한다.
+저장소 공개 전환은 완료됐다. Marketplace 제출 전 남은 제품·법무 결정은 License
+선택과 적용이다.
 
 ### 공개 등록 절차
 
