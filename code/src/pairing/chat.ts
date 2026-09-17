@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { ChatMessage, ChatState, CoachDelta, CoachRuntime, DriverSource } from "../contracts.js";
+import type { ChatMessage, ChatState, CoachDelta, CoachRuntime, DriverSource, ModelSelection } from "../contracts.js";
 import { text } from "../validation.js";
 
 export interface ChatOptions {
@@ -18,6 +18,7 @@ export function createChat(options: ChatOptions) {
   let runtime: CoachRuntime | undefined;
   let activeRequest: { abortController: AbortController; task: Promise<void> } | undefined;
   let driverChangeTask: Promise<void> | undefined;
+  let modelChangeTask: Promise<void> | undefined;
   let isEnded = false;
   let closeTask: Promise<void> | undefined;
 
@@ -26,7 +27,7 @@ export function createChat(options: ChatOptions) {
     let status: ChatState["status"] = "idle";
     if (isEnded) {
       status = "ended";
-    } else if (activeRequest || driverChangeTask) {
+    } else if (activeRequest || driverChangeTask || modelChangeTask) {
       status = "working";
     }
     return {
@@ -73,7 +74,7 @@ export function createChat(options: ChatOptions) {
   /** 중복 질문을 막고 기존 SDK 세션으로 새 질문을 전송하며, 중단된 답변도 부분 응답으로 보존한다. */
   function submit(question: string): Promise<void> {
     if (isEnded) return Promise.reject(new Error("CHAT_ENDED"));
-    if (activeRequest || driverChangeTask) return Promise.reject(new Error("CHAT_BUSY"));
+    if (activeRequest || driverChangeTask || modelChangeTask) return Promise.reject(new Error("CHAT_BUSY"));
     text(question, 16 * 1024, "INVALID_COACH_MESSAGE");
 
     const requestId = randomUUID();
@@ -133,7 +134,7 @@ export function createChat(options: ChatOptions) {
   /** Replace the Driver scope only while idle, rejecting the Pair's own session. */
   async function setDriver(driver: DriverSource | null): Promise<void> {
     if (isEnded) throw new Error("CHAT_ENDED");
-    if (activeRequest || driverChangeTask) throw new Error("CHAT_BUSY");
+    if (activeRequest || driverChangeTask || modelChangeTask) throw new Error("CHAT_BUSY");
     if (driver?.sessionId === runtime?.sessionId) throw new Error("COACH_SELF_BINDING_REJECTED");
 
     driverChangeTask = Promise.resolve().then(() => runtime?.setDriver(driver));
@@ -146,16 +147,41 @@ export function createChat(options: ChatOptions) {
     }
   }
 
+  async function setModel(selection: ModelSelection): Promise<void> {
+    if (isEnded) throw new Error("CHAT_ENDED");
+    if (activeRequest || driverChangeTask || modelChangeTask) throw new Error("CHAT_BUSY");
+    modelChangeTask = Promise.resolve().then(() => runtime?.setModel(selection));
+    publish();
+    try { await modelChangeTask; }
+    finally {
+      if (runtime?.closed) isEnded = true;
+      modelChangeTask = undefined;
+      publish();
+    }
+  }
+
+  async function listModels() {
+    if (isEnded) throw new Error("CHAT_ENDED");
+    if (activeRequest || driverChangeTask || modelChangeTask) throw new Error("CHAT_BUSY");
+    return runtime ? runtime.listModels() : undefined;
+  }
+
   /** 대화를 즉시 종료 상태로 전환하고 진행 중인 작업과 런타임을 정리하며, 실패한 정리는 재시도할 수 있다. */
   function end(): Promise<void> {
     if (closeTask) return closeTask;
     // 중단과 자원 정리가 끝나기 전에도 새 질문은 즉시 거절한다.
     isEnded = true;
+    activeRequest?.abortController.abort();
     publish();
 
     /** 로그 변경, 응답 중단, 런타임 종료를 순서대로 시도하고 오류가 있어도 나머지 정리를 수행한다. */
     const closeResources = async (): Promise<void> => {
       let failure: unknown;
+      try {
+        await modelChangeTask;
+      } catch (error) {
+        failure = error;
+      }
       try {
         await driverChangeTask;
       } catch (error) {
@@ -181,5 +207,5 @@ export function createChat(options: ChatOptions) {
     return closeTask;
   }
 
-  return { getState, submit, setDriver, stop, end };
+  return { getState, submit, setDriver, setModel, listModels, stop, end };
 }

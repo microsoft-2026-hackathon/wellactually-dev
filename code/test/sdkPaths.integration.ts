@@ -48,6 +48,18 @@ test("real SDK reads both complete trees without following links outside them or
     await mkdir(path.join(root, "many"));
     await Promise.all(Array.from({ length: 260 }, (_, index) =>
       writeFile(path.join(root, "many", `${index}.txt`), index === 259 ? "DEEP_MARKER" : "synthetic")));
+    const chatRoot = path.join(directory, "workspaceStorage", "synthetic-workspace");
+    const chatRecords = path.join(directory, "globalStorage", "emptyWindowChatSessions");
+    const chatArtifacts = path.join(chatRoot, "chatEditingSessions", "chosen");
+    await mkdir(chatRecords, { recursive: true });
+    await mkdir(chatArtifacts, { recursive: true });
+    const chatFile = path.join(chatRecords, "chosen.jsonl");
+    const otherChat = path.join(chatRecords, "other.jsonl");
+    await writeFile(chatFile, JSON.stringify({ kind: 0, v: {
+      version: 3, sessionId: "chosen", requests: [{ message: "ORDINARY_CHAT_MARKER" }],
+    } }) + "\n");
+    await writeFile(otherChat, "UNSELECTED_CHAT_MARKER");
+    await writeFile(path.join(chatArtifacts, "state.json"), '{"synthetic":"EDITING_ARTIFACT_MARKER"}');
     const client = await createIsolatedClient(path.join(directory, "alias"));
     const owned = ownedRuntimeDirectory(client);
     try {
@@ -116,6 +128,21 @@ test("real SDK reads both complete trees without following links outside them or
         assert.match((await execute("view", { path: second })).textResultForLlm, /SECOND_MARKER/);
         await policy.setDriver(null);
         assert.notEqual((await execute("view", { path: second })).resultType, "success");
+        await policy.setDriver({
+          kind: "vscode-chat", file: chatFile, artifactsDirectory: chatArtifacts, sessionId: "chosen", title: "Synthetic Chat",
+        });
+        assert.match((await execute("view", { path: chatFile })).textResultForLlm, /ORDINARY_CHAT_MARKER/);
+        assert.match((await execute("grep", { pattern: "ORDINARY_CHAT_MARKER", paths: chatFile, output_mode: "content" }))
+          .textResultForLlm, /ORDINARY_CHAT_MARKER/);
+        assert.match((await execute("view", { path: path.join(chatArtifacts, "state.json") }))
+          .textResultForLlm, /EDITING_ARTIFACT_MARKER/);
+        for (const denied of [chatRoot, chatRecords, otherChat, path.dirname(chatArtifacts), second]) {
+          assert.notEqual((await execute("view", { path: denied })).resultType, "success", denied);
+        }
+        assert.notEqual((await execute("grep", { pattern: ".", paths: chatRecords })).resultType, "success");
+        await policy.setDriver(null);
+        assert.notEqual((await execute("view", { path: chatFile })).resultType, "success");
+        assert.notEqual((await execute("view", { path: chatArtifacts })).resultType, "success");
         for (const name of ["bash", "edit", "create", "task", "skill", "web_fetch"]) {
           assert.notEqual((await execute(name, {})).resultType, "success", name);
         }

@@ -1,13 +1,14 @@
 import * as vscode from "vscode";
 import { realpath } from "node:fs/promises";
-import { homedir } from "node:os";
 import path from "node:path";
-import type { DriverSource } from "./contracts.js";
+import type { DriverSource, ModelSelection, PairModel, ReasoningEffort } from "./contracts.js";
 import { createChat } from "./pairing/chat.js";
-import { inspectDriverSession, listDriverSessions } from "./driver/source.js";
+import { copilotSessionStores, driverPickerItem, inspectCatalogSession, listDriverCatalog } from "./driver/catalog.js";
+import { vscodeCatalogPaths } from "./driver/vscodeCatalog.js";
 import { createDriverSelection } from "./driver/selection.js";
 import { createCoachRuntime } from "./runtime/coachRuntime.js";
-import { getHostGitHubToken } from "./runtime/sdkRuntime.js";
+import { getHostGitHubToken, listPairModels } from "./runtime/sdkRuntime.js";
+import { DEFAULT_PAIR_MODEL, defaultModelSelection, readModelSelection, validateModelSelection } from "./runtime/models.js";
 import { CoachViewProvider } from "./ui/coachView.js";
 import type { ViewCommand, ViewState } from "./ui/messages.js";
 import { hostFailureText, hostText, type HostMessage } from "./hostMessages.js";
@@ -35,6 +36,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
   let notice: HostMessage | null = null;
   let newChatTask: Promise<void> | undefined;
   const driverSelection = createDriverSelection(publishState);
+  const modelPreferenceKey = "wellactually.pairModel";
+  let modelSelection: ModelSelection = { modelId: getConfiguredModel() || DEFAULT_PAIR_MODEL };
+  let initialModelError: unknown;
+  const savedModel: unknown = context.workspaceState.get(modelPreferenceKey);
+  if (savedModel !== undefined) {
+    try { modelSelection = readModelSelection(savedModel); }
+    catch (error) { initialModelError = error; }
+  }
+  let availableModels: readonly PairModel[] = [];
+  let modelAction: {
+    task: Promise<void>;
+    controller: AbortController;
+    picker: vscode.CancellationTokenSource;
+  } | undefined;
 
   /** Read the model for a new Pair runtime, leaving an empty value to the runtime default. */
   function getConfiguredModel(): string {
@@ -90,11 +105,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
           // 이후 편집기 포커스가 바뀌어도 이 대화의 참고 범위가 달라지지 않도록 고정한다.
           if (!workspacePath) workspacePath = await chooseProjectDirectory();
           signal.throwIfAborted();
-          const model = getConfiguredModel();
           return await createCoachRuntime({
             workspace: workspacePath,
             directory: path.join(context.globalStorageUri.fsPath, "runtime"),
-            ...(model ? { model } : {}),
+            model: modelSelection.modelId,
+            ...(modelSelection.reasoningEffort ? { reasoningEffort: modelSelection.reasoningEffort } : {}),
+            onModels(models) { availableModels = models; publishState(); },
             ...(selectedDriver ? { driver: selectedDriver } : {}),
             getToken: () => getGitHubToken(signal),
           });
@@ -138,6 +154,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
       notice: notice === null ? "" : hostText(notice),
       starting: isStarting,
       selectingDriver: driverSelection.active,
+      model: {
+        id: modelSelection.modelId,
+        name: availableModels.find(item => item.id === modelSelection.modelId)?.name ??
+          (modelSelection.modelId === DEFAULT_PAIR_MODEL ? "Claude Haiku 4.5" : modelSelection.modelId),
+        reasoningEffort: modelSelection.reasoningEffort ?? null,
+        reasoningAvailable: availableModels.length
+          ? !!availableModels.find(item => item.id === modelSelection.modelId)?.reasoningEfforts.length : null,
+        busy: !!modelAction,
+      },
     };
   }
 
@@ -162,9 +187,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
 
   /** End the Pair conversation without stopping the connected Driver. */
   async function endConversation(): Promise<void> {
-    await chat.end();
+    let failure: unknown;
+    try { await cancelModelAction(); } catch (error) { failure = error; }
+    try { await chat.end(); } catch (error) { failure ??= error; }
     notice = "ended";
     publishState();
+    if (failure) throw failure;
   }
 
   /** 중복 초기화 요청을 하나로 합치고 이전 대화 정리 후 프로젝트·로그 연결이 없는 새 대화를 만든다. */
@@ -198,8 +226,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
       if (targetChat !== chat) throw new Error("WRONG_CHAT_ID");
       workspacePath = project;
       publishState();
-      const sessionStateDirectory = path.join(homedir(), ".copilot", "session-state");
-      const { sessions, failures } = await listDriverSessions(sessionStateDirectory, project);
+      const catalogPaths = vscodeCatalogPaths(context.globalStorageUri.fsPath);
+      const { sessions, failures } = await listDriverCatalog(copilotSessionStores(), catalogPaths);
       for (const failure of failures) output.appendLine(`${failure.code}: ${failure.sessionId}`);
       if (failures.length) {
         void vscode.window.showWarningMessage(hostText("driverSessionsSkipped", { count: failures.length }));
@@ -209,22 +237,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
         return;
       }
       if (targetChat !== chat || targetChat.getState().status !== "idle") throw new Error("CHAT_BUSY");
-      const selected = await vscode.window.showQuickPick(sessions.map(session => ({
-        label: session.title.replace(/\s+/g, " "),
-        description: session.workspace,
-        detail: hostText("driverLastActive", {
-          time: new Date(session.modifiedTime).toLocaleString("ko-KR"),
-          sessionId: session.sessionId,
-        }),
-        sessionId: session.sessionId,
-      })), {
-        title: hostText("chooseDriver"),
+      const selected = await vscode.window.showQuickPick(sessions.map(driverPickerItem), {
+        title: hostText("chooseDriver", { count: sessions.length }),
         placeHolder: hostText("driverSessionScope"),
         matchOnDescription: true,
         matchOnDetail: true,
       });
       if (!selected) return;
-      const source = await inspectDriverSession(sessionStateDirectory, selected.sessionId);
+      const source = await inspectCatalogSession(selected.session, catalogPaths);
       if (targetChat !== chat) throw new Error("WRONG_CHAT_ID");
       await targetChat.setDriver(source);
       if (targetChat !== chat || targetChat.getState().status === "ended") throw new Error("WRONG_CHAT_ID");
@@ -247,11 +267,82 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
     publishState();
   }
 
+  async function cancelModelAction(): Promise<void> {
+    const action = modelAction;
+    if (!action) return;
+    action.controller.abort();
+    action.picker.cancel();
+    await action.task;
+  }
+
+  function chooseModelSettings(reasoningOnly: boolean): Promise<void> {
+    if (modelAction || driverSelection.active || chat.getState().status !== "idle") {
+      return Promise.reject(new Error("CHAT_BUSY"));
+    }
+    const targetChat = chat;
+    const controller = new AbortController();
+    const picker = new vscode.CancellationTokenSource();
+    const signal = controller.signal;
+    const task = Promise.resolve().then(async () => {
+      try {
+        if (!vscode.workspace.isTrusted || vscode.env.remoteName) throw new Error("TRUSTED_LOCAL_WORKSPACE_REQUIRED");
+        availableModels = await targetChat.listModels() ?? await listPairModels(
+          path.join(context.globalStorageUri.fsPath, "runtime"), () => getGitHubToken(signal), signal);
+        signal.throwIfAborted();
+        publishState();
+        let next: ModelSelection | undefined;
+        if (reasoningOnly) {
+          const current = validateModelSelection(modelSelection, availableModels);
+          if (!current.reasoningEfforts.length) throw new Error("COACH_REASONING_UNAVAILABLE");
+          const labels: Record<ReasoningEffort, HostMessage> = {
+            low: "reasoningLow", medium: "reasoningMedium", high: "reasoningHigh",
+            xhigh: "reasoningXhigh", max: "reasoningMax",
+          };
+          const selected = await vscode.window.showQuickPick(current.reasoningEfforts.map(effort => ({
+            label: hostText(labels[effort]),
+            description: effort === modelSelection.reasoningEffort ? hostText("selectedOption") : "",
+            effort,
+          })), { title: hostText("chooseReasoning"), placeHolder: hostText("modelNextMessage") }, picker.token);
+          if (selected) next = { modelId: current.id, reasoningEffort: selected.effort };
+        } else {
+          const selected = await vscode.window.showQuickPick(availableModels.map(model => ({
+            label: model.name,
+            description: model.id,
+            detail: model.id === modelSelection.modelId ? hostText("selectedOption") : "",
+            model,
+          })), { title: hostText("chooseModel"), placeHolder: hostText("modelRecommendation"), matchOnDescription: true }, picker.token);
+          if (selected) next = selected.model.id === modelSelection.modelId
+            ? modelSelection : defaultModelSelection(selected.model);
+        }
+        if (!next || signal.aborted) return;
+        if (targetChat !== chat || targetChat.getState().status !== "idle") throw new Error("WRONG_CHAT_ID");
+        validateModelSelection(next, availableModels);
+        await targetChat.setModel(next);
+        modelSelection = next;
+        publishState();
+        try { await context.workspaceState.update(modelPreferenceKey, next); }
+        catch { throw new Error("COACH_MODEL_PREFERENCE_SAVE_FAILED"); }
+      } catch (error) {
+        if (!(signal.aborted && error instanceof Error && error.name === "AbortError")) throw error;
+      } finally {
+        picker.dispose();
+        modelAction = undefined;
+        publishState();
+      }
+    });
+    modelAction = { task, controller, picker };
+    publishState();
+    return task;
+  }
+
   /** 오래된 대화의 명령을 거절하고, 검증된 웹뷰 명령을 해당 호스트 작업으로 분기한다. */
   async function handleCommand(command: ViewCommand): Promise<void> {
     if (isDisposed) throw new Error("EXTENSION_CLOSED");
     if ("chatId" in command && command.chatId !== chat.getState().id) {
       throw new Error("WRONG_CHAT_ID");
+    }
+    if (modelAction && ["message", "selectDriver", "disconnectDriver", "selectModel", "selectReasoning"].includes(command.type)) {
+      throw new Error("CHAT_BUSY");
     }
 
     switch (command.type) {
@@ -275,6 +366,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
         return;
       case "disconnectDriver":
         await disconnectDriver();
+        return;
+      case "selectModel":
+        await chooseModelSettings(false);
+        return;
+      case "selectReasoning":
+        await chooseModelSettings(true);
         return;
     }
   }
@@ -306,13 +403,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
     async shutdown() {
       isDisposed = true;
       try {
-        await chat.end();
+        await endConversation();
       } finally {
         provider.dispose();
       }
     },
   };
   publishState();
+  if (initialModelError) showFailure(initialModelError);
   return application;
 }
 

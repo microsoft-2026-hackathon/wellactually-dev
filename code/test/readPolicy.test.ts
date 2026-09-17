@@ -136,6 +136,46 @@ test("access is the union of both roots, with no broad parent-directory Driver g
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
+test("ordinary Chat shares only its transcript and session-specific editing tree, never sibling chats or indexes", async () => {
+  const base = await mkdtemp(path.resolve(".chat-policy-"));
+  try {
+    const root = path.join(base, "project");
+    const store = path.join(base, "workspaceStorage", "workspace");
+    const records = path.join(store, "chatSessions");
+    const editing = path.join(store, "chatEditingSessions");
+    const artifacts = path.join(editing, "chosen");
+    await mkdir(root);
+    await mkdir(records, { recursive: true });
+    await mkdir(artifacts, { recursive: true });
+    await mkdir(path.join(editing, "sibling"));
+    const file = path.join(records, "chosen.jsonl");
+    const sibling = path.join(records, "sibling.jsonl");
+    await writeFile(file, "SYNTHETIC_CHAT");
+    await writeFile(sibling, "SYNTHETIC_SIBLING");
+    await writeFile(path.join(artifacts, "state.json"), "{}");
+    await writeFile(path.join(store, "state.vscdb"), "SYNTHETIC_INDEX");
+    await symlink(sibling, path.join(artifacts, "escape"));
+    const policy = await createReadPolicy(root);
+    await policy.setDriver({ kind: "vscode-chat", file, artifactsDirectory: artifacts, sessionId: "chosen", title: "Chosen" });
+    for (const allowed of [root, file, artifacts, path.join(artifacts, "state.json")]) {
+      assert.deepEqual(await policy.sourceFiles("view", { path: allowed }), [allowed]);
+    }
+    assert.deepEqual(await policy.sourceFiles("grep", { pattern: ".", paths: [file, artifacts] }), [file, artifacts]);
+    for (const denied of [store, records, editing, sibling, path.join(editing, "sibling"),
+      path.join(store, "state.vscdb"), path.join(artifacts, "escape")]) {
+      await assert.rejects(policy.sourceFiles("view", { path: denied }), /READ_PATH_DENIED/);
+    }
+    await assert.rejects(policy.setDriver({
+      kind: "vscode-chat", file, artifactsDirectory: editing, sessionId: "chosen", title: "Invalid",
+    }), /READ_DRIVER_INVALID/);
+    await policy.setDriver({ kind: "vscode-chat", file: sibling, sessionId: "sibling", title: "Next" });
+    await assert.rejects(policy.sourceFiles("view", { path: file }), /READ_PATH_DENIED/);
+    await assert.rejects(policy.sourceFiles("view", { path: artifacts }), /READ_PATH_DENIED/);
+    await policy.setDriver(null);
+    await assert.rejects(policy.sourceFiles("view", { path: sibling }), /READ_PATH_DENIED/);
+  } finally { await rm(base, { recursive: true, force: true }); }
+});
+
 test("bounded tool text preserves multibyte characters and discloses truncation", () => {
   const original = "가🙂".repeat(5_000);
   const result = boundedToolText(original);

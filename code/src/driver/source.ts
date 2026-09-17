@@ -2,16 +2,16 @@ import { constants } from "node:fs";
 import { lstat, open, readdir, realpath } from "node:fs/promises";
 import path from "node:path";
 import { parseDocument } from "yaml";
-import type { DriverSource } from "../contracts.js";
+import type { SdkDriverSource } from "../contracts.js";
 import { isRecord, text } from "../validation.js";
-import { canonicalPathAllowed } from "../runtime/readPolicy.js";
 
 const MAX_METADATA_BYTES = 64 * 1024;
 const sessionIdPattern = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/;
 
-export interface DriverSession extends DriverSource {
+export interface DriverSession extends SdkDriverSource {
   workspace: string;
   modifiedTime: number;
+  hasEvents: boolean;
 }
 
 export interface DriverSessionList {
@@ -33,7 +33,7 @@ async function readPrefix(filePath: string, entire: boolean): Promise<Buffer> {
   } finally { await file.close(); }
 }
 
-async function readMetadata(root: string, sessionId: string): Promise<DriverSession | undefined> {
+async function readMetadata(root: string, sessionId: string): Promise<DriverSession> {
   if (!sessionIdPattern.test(sessionId)) throw new Error("DRIVER_SESSION_ID_INVALID");
   const directory = path.join(root, sessionId);
   const initial = await lstat(directory);
@@ -49,22 +49,36 @@ async function readMetadata(root: string, sessionId: string): Promise<DriverSess
     metadata = document.toJS({ maxAliasCount: 0 });
   } catch { throw new Error("DRIVER_SESSION_METADATA_INVALID"); }
   if (!isRecord(metadata)) throw new Error("DRIVER_SESSION_METADATA_INVALID");
-  if (metadata.client_name !== "vscode-agent-host") return undefined;
   if (metadata.id !== sessionId) throw new Error("DRIVER_SESSION_ID_MISMATCH");
-  const title = text(metadata.name ?? metadata.summary ?? sessionId, 4096, "DRIVER_SESSION_METADATA_INVALID");
+  const titles = [metadata.name, metadata.summary];
+  if (titles.some(value => value !== undefined && value !== null && typeof value !== "string")) {
+    throw new Error("DRIVER_SESSION_METADATA_INVALID");
+  }
+  // An automatically seeded name can be the entire first user message, not the session title.
+  const candidates = [metadata.user_named === true ? metadata.name : undefined, metadata.summary];
+  const title = text(candidates.find(value => typeof value === "string" && value.trim()) ?? sessionId,
+    4096, "DRIVER_SESSION_METADATA_INVALID");
   const workspace = text(metadata.cwd, 4096, "DRIVER_SESSION_METADATA_INVALID");
   if (!path.isAbsolute(workspace)) throw new Error("DRIVER_SESSION_METADATA_INVALID");
-  const events = await lstat(path.join(directory, "events.jsonl"));
-  if (!events.isFile() || events.isSymbolicLink()) throw new Error("DRIVER_SESSION_FILE_REQUIRED");
+  let hasEvents = false;
+  let eventsModifiedTime = 0;
+  try {
+    const events = await lstat(path.join(directory, "events.jsonl"));
+    if (!events.isFile() || events.isSymbolicLink()) throw new Error("DRIVER_SESSION_FILE_REQUIRED");
+    hasEvents = events.size > 0;
+    eventsModifiedTime = events.mtimeMs;
+  } catch (error) {
+    if (!isRecord(error) || error.code !== "ENOENT") throw error;
+  }
   const metadataStat = await lstat(metadataPath);
   return {
-    directory, sessionId, title, workspace,
+    directory, sessionId, title, workspace, hasEvents,
     // Metadata timestamps can stay at creation time while a conversation is active.
-    modifiedTime: Math.max(events.mtimeMs, metadataStat.mtimeMs),
+    modifiedTime: Math.max(eventsModifiedTime, metadataStat.mtimeMs),
   };
 }
 
-export async function listDriverSessions(sessionStateDirectory: string, project: string): Promise<DriverSessionList> {
+export async function listDriverSessions(sessionStateDirectory: string): Promise<DriverSessionList> {
   const result: DriverSessionList = { sessions: [], failures: [] };
   let root: string;
   try {
@@ -79,24 +93,28 @@ export async function listDriverSessions(sessionStateDirectory: string, project:
     try {
       // Discovery reads metadata and file timestamps, never conversation bodies.
       const session = await readMetadata(root, entry.name);
-      if (session) result.sessions.push(session);
+      result.sessions.push(session);
     } catch (error) {
       const code = error instanceof Error && /^DRIVER_[A-Z_]+$/.test(error.message)
         ? error.message : "DRIVER_SESSION_READ_FAILED";
       result.failures.push({ sessionId: entry.name, code });
     }
   }
-  const inProject = (session: DriverSession): number =>
-    Number(canonicalPathAllowed(project, path.resolve(session.workspace)));
   result.sessions.sort((a, b) =>
-    inProject(b) - inProject(a) || b.modifiedTime - a.modifiedTime || a.sessionId.localeCompare(b.sessionId));
+    b.modifiedTime - a.modifiedTime || a.sessionId.localeCompare(b.sessionId));
   return result;
 }
 
-export async function inspectDriverSession(sessionStateDirectory: string, sessionId: string): Promise<DriverSource> {
-  const root = await realpath(sessionStateDirectory);
-  const session = await readMetadata(root, sessionId);
-  if (!session) throw new Error("DRIVER_SESSION_NOT_VSCODE");
+export async function inspectDriverSession(sessionStateDirectory: string, sessionId: string): Promise<SdkDriverSource> {
+  let session: DriverSession;
+  try {
+    const root = await realpath(sessionStateDirectory);
+    session = await readMetadata(root, sessionId);
+  } catch (error) {
+    if (isRecord(error) && error.code === "ENOENT") throw new Error("DRIVER_SESSION_SOURCE_UNAVAILABLE");
+    throw error;
+  }
+  if (!session.hasEvents) throw new Error("DRIVER_SESSION_NOT_READY");
   const buffer = await readPrefix(path.join(session.directory, "events.jsonl"), false);
   const newline = buffer.indexOf(10);
   if (newline < 0) throw new Error("DRIVER_SESSION_HEADER_INVALID");

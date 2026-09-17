@@ -44,7 +44,7 @@ test("the selected Driver session and project information use an accessible nati
   assert.match(html, /<dialog id="settings-dialog" aria-labelledby="settings-title"/);
   assert.match(html, /id="open-settings"[^>]*aria-haspopup="dialog"[^>]*aria-controls="settings-dialog"/);
   assert.match(html, /<label[^>]*for="coach-question"/);
-  assert.match(html, /aria-describedby="composer-state question-error"/);
+  assert.match(html, /aria-describedby="composer-state question-error composer-keyboard-hint"/);
   assert.match(html, /id="question-error"[^>]*role="alert"/);
   assert.match(html, /id="close-settings"[^>]*aria-label="설정 닫기"/);
   assert.match(html, /id="close-settings"[^>]*autofocus/);
@@ -53,6 +53,25 @@ test("the selected Driver session and project information use an accessible nati
   assert.match(html, /숨김 파일과 민감한 파일도 포함됩니다/);
   assert.doesNotMatch(html, /드라이버 로그 선택/);
   assert.doesNotMatch(html, /language-setting|language-help|setLanguage|<select\b|<option\b/);
+});
+
+test("model and reasoning pickers share the rounded composer with a non-interactive read-only role", () => {
+  const html = createWebviewHtml(options);
+  const composer = html.match(/<form id="question-form"[\s\S]*?<\/form>/)?.[0];
+  assert.ok(composer);
+  assert.match(composer, /class="composer-input"[\s\S]*<textarea[\s\S]*class="composer-bottom"/);
+  assert.match(composer, /<span class="composer-role"[^>]*>페어 · 읽기 전용<\/span>/);
+  assert.match(composer, /id="model-controls"[^>]*role="group"[^>]*aria-label="페어 모델 설정"/);
+  for (const [id, command] of [["select-model", "selectModel"], ["select-reasoning", "selectReasoning"]]) {
+    assert.match(composer, new RegExp(`<button id="${id}" type="button"[^>]*data-command="${command}"[^>]*aria-haspopup="dialog"[^>]*disabled>`));
+    assert.match(composer, new RegExp(`id="${id}"[\\s\\S]*?<svg[^>]*aria-hidden="true"`));
+  }
+  assert.match(composer, /id="select-model"[^>]*aria-label="모델 선택 · 현재 모델"/);
+  assert.match(composer, /id="select-reasoning"[^>]*aria-describedby="reasoning-description"[^>]*aria-label="추론 수준 선택 · 현재 기본"/);
+  assert.match(composer, /id="reasoning-label"[^>]*>추론: 기본<\/span>/);
+  assert.match(composer, /class="composer-actions"[\s\S]*id="stop-reply"[\s\S]*id="send-question"/);
+  assert.match(composer, /id="composer-keyboard-hint"/);
+  assert.doesNotMatch(composer, /<select\b|<option\b|role="menu"|attachment|voice|agent-mode|data-command="[^"]*(?:execute|DriverInstruction)"/i);
 });
 
 test("ending keeps new chat and stop controls without a report workflow", () => {

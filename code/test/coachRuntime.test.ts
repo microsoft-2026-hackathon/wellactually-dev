@@ -8,6 +8,7 @@ import { parseChatMessage } from "../src/ui/chatMessage.js";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import type { ModelSelection, PairModel } from "../src/contracts.js";
 
 class FakeSession implements RuntimeSession {
   sessionId = "own-coach-session";
@@ -34,6 +35,56 @@ class FakeSession implements RuntimeSession {
     this.emit("session.idle", {});
   }
 }
+
+test("model and reasoning switches preserve the SDK conversation and selected Driver scope", async () => {
+  const session = new FakeSession();
+  session.onSend = () => session.finish("Same conversation");
+  const root = path.resolve("test/fixtures/workspace");
+  const policy = await createReadPolicy(root);
+  const models: PairModel[] = [
+    { id: "first", name: "First", reasoningEfforts: ["low", "high"], defaultReasoningEffort: "low" },
+    { id: "second", name: "Second", reasoningEfforts: [] },
+  ];
+  const changes: ModelSelection[] = [];
+  const runtime = attachCoachRuntime(session, policy, async () => {}, 60_000, {
+    async listModels() { return models; },
+    async setModel(value) { changes.push(value); },
+  });
+  try {
+    for await (const _ of runtime.stream("First message", new AbortController().signal)) {}
+    const prompts = session.prompts.length;
+    assert.deepEqual(await runtime.listModels(), models);
+    await runtime.setModel({ modelId: "first", reasoningEffort: "high" });
+    await runtime.setModel({ modelId: "second" });
+    assert.deepEqual(changes, [{ modelId: "first", reasoningEffort: "high" }, { modelId: "second" }]);
+    assert.equal(session.prompts.length, prompts);
+    assert.equal(session.disconnected, 0);
+    assert.equal(runtime.sessionId, session.sessionId);
+    assert.equal(runtime.closed, false);
+    assert.deepEqual(await policy.sourceFiles("view", { path: "catalog.ts" }), [path.join(root, "catalog.ts")]);
+    await assert.rejects(runtime.setModel({ modelId: "second", reasoningEffort: "high" }), /COACH_REASONING_UNSUPPORTED/);
+    assert.equal(runtime.closed, false);
+    for await (const _ of runtime.stream("Follow-up", new AbortController().signal)) {}
+    assert.equal(session.prompts.length, prompts + 1);
+  } finally { await runtime.close(); }
+});
+
+test("an unconfirmed model switch ends the chat instead of showing stale settings on a live runtime", async () => {
+  const session = new FakeSession();
+  session.onSend = () => session.finish();
+  const runtime = attachCoachRuntime(session, await createReadPolicy(path.resolve("test/fixtures/workspace")),
+    async () => {}, 60_000, {
+      async listModels() { return [{ id: "model", name: "Model", reasoningEfforts: [] }]; },
+      async setModel() { throw new Error("Synthetic switch failure"); },
+    });
+  const chat = createChat({ async createRuntime() { return runtime; }, publish() {}, emit() {} });
+  await chat.submit("First message");
+  await assert.rejects(chat.setModel({ modelId: "model" }), /COACH_MODEL_SWITCH_FAILED/);
+  assert.equal(chat.getState().status, "ended");
+  assert.equal(runtime.closed, true);
+  await assert.rejects(chat.submit("Do not send to unknown model"), /CHAT_ENDED/);
+  await chat.end();
+});
 
 test("post-tool completion cannot inherit a planning message or an earlier turn end", async () => {
   const root = path.resolve("test/fixtures/workspace");
@@ -274,6 +325,31 @@ test("changing Driver preserves the same SDK conversation and affects only the n
     assert.equal(session.disconnected, 0);
     await runtime.close();
   } finally { await rm(directory, { recursive: true, force: true }); }
+});
+
+test("ordinary Chat source context names the exact transcript instead of inventing an SDK log directory", async () => {
+  const base = await mkdtemp(path.resolve(".chat-context-"));
+  try {
+    const project = path.join(base, "project");
+    const records = path.join(base, "chatSessions");
+    await mkdir(project);
+    await mkdir(records);
+    const file = path.join(records, "selected.jsonl");
+    await writeFile(file, '{"kind":0,"v":{"sessionId":"selected"}}\n');
+    const policy = await createReadPolicy(project);
+    await policy.setDriver({ kind: "vscode-chat", file, sessionId: "selected", title: "Ordinary Chat" });
+    const session = new FakeSession();
+    session.onSend = () => session.finish();
+    const runtime = attachCoachRuntime(session, policy, async () => {});
+    try {
+      for await (const _ of runtime.stream("Review the selected discussion", new AbortController().signal)) {}
+      assert.ok(session.prompts[0]?.includes(file));
+      assert.match(session.prompts[0]!, /standard VS Code Copilot Chat/);
+      assert.match(session.prompts[0]!, /exact JSON\/JSONL transcript/);
+      assert.match(session.prompts[0]!, /Never read the shared chatSessions parent or sibling chats/);
+      assert.doesNotMatch(session.prompts[0]!, /entire directory tree|Read its events\.jsonl/);
+    } finally { await runtime.close(); }
+  } finally { await rm(base, { recursive: true, force: true }); }
 });
 
 test("cancel waits for idle, rejects concurrent changes and removes listeners even with a paused consumer", async () => {

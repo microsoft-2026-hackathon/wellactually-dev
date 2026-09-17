@@ -4,6 +4,8 @@ import {
   CopilotClient, RuntimeConnection, type CopilotClientOptions, type CopilotSession, type SessionConfig,
 } from "@github/copilot-sdk";
 import { canonicalPathAllowed, READ_TOOLS, createReadPolicy, type ReadPolicy } from "./readPolicy.js";
+import type { PairModel, ReasoningEffort } from "../contracts.js";
+import { DEFAULT_PAIR_MODEL, pairModels } from "./models.js";
 
 export interface RuntimeAuth {
   githubToken?: string;
@@ -232,9 +234,23 @@ export function createAuthenticatedClient(
   return authenticateClient(auth => createIsolatedClient(directory, auth), getToken);
 }
 
+export async function listPairModels(
+  directory: string, getToken: () => Promise<string | undefined>, signal: AbortSignal,
+): Promise<readonly PairModel[]> {
+  signal.throwIfAborted();
+  const client = await createAuthenticatedClient(directory, getToken);
+  try {
+    signal.throwIfAborted();
+    const models = pairModels(await deadline(client.listModels(), 15_000, "COACH_MODEL_LIST_TIMEOUT"));
+    signal.throwIfAborted();
+    return models;
+  } finally { await stopClient(client); }
+}
+
 /** Check storage isolation and configure the Pair's read-only tools, permissions and persona. */
 export async function readSessionConfig(
-  workspaceDirectory: string, isolatedDirectory: string, model = "claude-haiku-4.5",
+  workspaceDirectory: string, isolatedDirectory: string, model = DEFAULT_PAIR_MODEL,
+  reasoningEffort?: ReasoningEffort,
 ): Promise<{ config: SessionConfig; policy: ReadPolicy }> {
   const policy = await createReadPolicy(workspaceDirectory);
   const isolated = await realpath(isolatedDirectory);
@@ -251,6 +267,7 @@ export async function readSessionConfig(
     config: {
       clientName: "wellactually-coach",
       model,
+      ...(reasoningEffort ? { reasoningEffort } : {}),
       streaming: true,
       workingDirectory: policy.root,
       additionalDirectories: [],

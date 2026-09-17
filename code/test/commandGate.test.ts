@@ -9,11 +9,12 @@ test("the first question can target an idle chat without starting a separate wor
 });
 
 test("every conversation action carries its chat identity, while only readiness is global", () => {
-  for (const type of ["newChat", "stopReply", "end", "selectDriver", "disconnectDriver"]) {
+  for (const type of ["newChat", "stopReply", "end", "selectDriver", "disconnectDriver", "selectModel", "selectReasoning"]) {
     const command = { type, requestId: "r1", chatId: "chat-1" };
     assert.deepEqual(parseViewCommand(command), command);
     assert.throws(() => parseViewCommand({ type, requestId: "r1" }), /INVALID_VIEW_COMMAND/);
     assert.throws(() => parseViewCommand({ ...command, jobId: "old-report" }), /INVALID_VIEW_COMMAND/);
+    assert.throws(() => parseViewCommand({ ...command, modelId: "injected" }), /INVALID_VIEW_COMMAND/);
   }
   const ready = { type: "ready", requestId: "r1" };
   assert.deepEqual(parseViewCommand(ready), ready);

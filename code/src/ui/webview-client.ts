@@ -1,4 +1,4 @@
-import type { ChatMessage, ChatState } from "../contracts.js";
+import type { ChatMessage, ChatState, ReasoningEffort } from "../contracts.js";
 import { MAX_MESSAGE_BYTES, type ViewCommand, type ViewEvent, type ViewState } from "./messages.js";
 import { uiText as t, type UiMessage } from "./strings.js";
 import { renderChatMessage, shouldSendKey } from "./chatMessage.js";
@@ -115,6 +115,69 @@ export class QuestionDraft {
 
 export interface WebviewApi { postMessage(command: ViewCommand): void }
 
+interface PickerControlState {
+  label: string;
+  accessibleName: string;
+  title: string;
+  disabled: boolean;
+}
+
+const reasoningMessages: Record<ReasoningEffort, UiMessage> = {
+  low: "reasoningLow", medium: "reasoningMedium", high: "reasoningHigh",
+  xhigh: "reasoningXhigh", max: "reasoningMax",
+};
+
+export function composerControlState(state: ViewState | null, responsePending = false): {
+  ended: boolean;
+  working: boolean;
+  inputDisabled: boolean;
+  sendDisabled: boolean;
+  stopVisible: boolean;
+  status: UiMessage;
+  message: UiMessage | null;
+  model: PickerControlState;
+  reasoning: PickerControlState;
+} {
+  const ended = state?.chat.status === "ended";
+  const modelBusy = !!state?.model.busy;
+  const working = !!state?.starting || (state?.chat.status === "working" && !modelBusy) || responsePending;
+  const disabled = !state || ended || working || modelBusy;
+  const message = !state ? "connecting" : ended ? "closedComposer"
+    : working ? "busyComposer" : modelBusy ? "modelBusyComposer" : null;
+  const blockedHelp = message ? ` ${t(message)}` : "";
+  const modelLabel = state?.model.name || state?.model.id || t("model");
+  const modelName = t("selectModel", { model: modelLabel });
+  const effort = state?.model.reasoningEffort;
+  const level = t(effort ? reasoningMessages[effort] : "reasoningDefault");
+  const reasoningName = t("selectReasoning", { level });
+  const available = state?.model.reasoningAvailable;
+  const reasoningHelp = available === false ? t("reasoningUnavailable")
+    : [!effort ? t("reasoningDefaultHelp") : "", available == null ? t("reasoningUnknown") : "", t("reasoningHelp")]
+      .filter(Boolean).join(" ");
+  return {
+    ended,
+    working,
+    inputDisabled: !state || ended,
+    sendDisabled: disabled,
+    stopVisible: !!state && !ended && working,
+    status: ended ? "endedShort" : state?.starting ? "connectingShort" : working ? "workingShort"
+      : modelBusy ? "modelBusyShort" : "readyShort",
+    message,
+    model: {
+      label: modelLabel,
+      accessibleName: modelName,
+      title: `${modelName}. ${t("modelHelp")}${blockedHelp}`,
+      disabled,
+    },
+    reasoning: {
+      label: t("reasoningLabel", { level }),
+      accessibleName: reasoningName,
+      title: `${reasoningName}. ${reasoningHelp}${blockedHelp}`,
+      disabled: disabled || available === false,
+    },
+  };
+}
+
 export function driverControlState(state: ViewState | null, working: boolean): {
   disabled: boolean;
   message: UiMessage | null;
@@ -123,6 +186,7 @@ export function driverControlState(state: ViewState | null, working: boolean): {
   if (state.chat.status === "ended") return { disabled: true, message: "closedComposer" };
   if (state.selectingDriver) return { disabled: true, message: "selectingDriver" };
   if (working) return { disabled: true, message: "busyComposer" };
+  if (state.model.busy) return { disabled: true, message: "modelBusyComposer" };
   return { disabled: false, message: null };
 }
 
@@ -272,24 +336,26 @@ export function mountCoachView(doc: Document, api: WebviewApi): { receive(event:
   }
   /** 연결·응답·종료·질문 접수 상태에 맞춰 입력창, 작업 버튼과 상태 안내를 일관되게 갱신한다. */
   function renderControls(): void {
-    const ended = state?.chat.status === "ended";
-    const working = !!state?.starting || state?.chat.status === "working" || !!replies.reply || draft.waiting;
-    const driverControls = driverControlState(state, working);
-    question.disabled = !state || ended;
-    element<HTMLButtonElement>("send-question").disabled = !state || ended || working;
-    visible("stop-reply", !ended && working);
-    visible("question-form", !ended);
-    visible("ended-actions", !!ended);
-    text("composer-state", !state ? t("connecting") : working ? t("busyComposer") : "");
-    let statusMessage: UiMessage = "readyShort";
-    if (state?.starting) {
-      statusMessage = "connectingShort";
-    } else if (ended) {
-      statusMessage = "endedShort";
-    } else if (working) {
-      statusMessage = "workingShort";
+    const controls = composerControlState(state, !!replies.reply || draft.waiting);
+    const driverControls = driverControlState(state, controls.working);
+    question.disabled = controls.inputDisabled;
+    element<HTMLButtonElement>("send-question").disabled = controls.sendDisabled;
+    visible("send-question", !controls.stopVisible);
+    visible("stop-reply", controls.stopVisible);
+    visible("question-form", !controls.ended);
+    visible("ended-actions", controls.ended);
+    text("composer-state", controls.message ? t(controls.message) : "");
+    text("view-status", t(controls.status));
+    for (const name of ["model", "reasoning"] as const) {
+      const control = controls[name];
+      const button = element<HTMLButtonElement>(`select-${name}`);
+      text(`${name}-label`, control.label);
+      button.disabled = control.disabled;
+      button.setAttribute("aria-label", control.accessibleName);
+      button.title = control.title;
     }
-    text("view-status", t(statusMessage));
+    text("reasoning-description", controls.reasoning.title);
+    element("model-controls").setAttribute("aria-busy", String(!!state?.model.busy));
     element("stream-reply").setAttribute("aria-busy", String(!!replies.reply));
     for (const button of doc.querySelectorAll<HTMLButtonElement>("[data-command]")) {
       switch (button.dataset.command) {
@@ -298,7 +364,7 @@ export function mountCoachView(doc: Document, api: WebviewApi): { receive(event:
           break;
         case "end":
           button.disabled = !state;
-          button.hidden = !!ended;
+          button.hidden = controls.ended;
           break;
         case "selectDriver":
         case "disconnectDriver":
@@ -364,7 +430,7 @@ export function mountCoachView(doc: Document, api: WebviewApi): { receive(event:
         followLatest = true;
         focusNewChat = true;
       }
-      const version = JSON.stringify([event.chat.messages, event.chat.status]);
+      const version = JSON.stringify(event.chat.messages);
       newContent ||= version !== contentVersion;
       contentVersion = version;
       state = event;
@@ -465,6 +531,8 @@ export function mountCoachView(doc: Document, api: WebviewApi): { receive(event:
       case "end":
       case "selectDriver":
       case "disconnectDriver":
+      case "selectModel":
+      case "selectReasoning":
         clearErrors();
         if (menu.contains(button)) {
           menu.open = false;
