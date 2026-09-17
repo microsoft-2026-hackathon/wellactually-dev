@@ -50,12 +50,27 @@ test("model and reasoning switches preserve the SDK conversation and selected Dr
     async listModels() { return models; },
     async setModel(value) { changes.push(value); },
   });
+  const directory = await mkdtemp(path.resolve(".model-driver-scope-"));
   try {
+    const previous = { directory: path.join(directory, "previous"), sessionId: "previous", title: "Previous Driver" };
+    const selected = { directory: path.join(directory, "selected"), sessionId: "selected", title: "Selected Driver" };
+    await mkdir(previous.directory);
+    await mkdir(selected.directory);
+    const previousFile = path.join(previous.directory, "events.jsonl");
+    const selectedFile = path.join(selected.directory, "events.jsonl");
+    await writeFile(previousFile, '{"text":"SYNTHETIC_PREVIOUS"}\n');
+    await writeFile(selectedFile, '{"text":"SYNTHETIC_SELECTED"}\n');
+    await runtime.setDriver(previous);
     for await (const _ of runtime.stream("First message", new AbortController().signal)) {}
     const prompts = session.prompts.length;
     assert.deepEqual(await runtime.listModels(), models);
     await runtime.setModel({ modelId: "first", reasoningEffort: "high" });
+    assert.deepEqual(await policy.sourceFiles("view", { path: previousFile }), [previousFile]);
+    await runtime.setDriver(selected);
     await runtime.setModel({ modelId: "second" });
+    assert.deepEqual(policy.driver, selected);
+    assert.deepEqual(await policy.sourceFiles("view", { path: selectedFile }), [selectedFile]);
+    await assert.rejects(policy.sourceFiles("view", { path: previousFile }), /READ_PATH_DENIED/);
     assert.deepEqual(changes, [{ modelId: "first", reasoningEffort: "high" }, { modelId: "second" }]);
     assert.equal(session.prompts.length, prompts);
     assert.equal(session.disconnected, 0);
@@ -66,7 +81,10 @@ test("model and reasoning switches preserve the SDK conversation and selected Dr
     assert.equal(runtime.closed, false);
     for await (const _ of runtime.stream("Follow-up", new AbortController().signal)) {}
     assert.equal(session.prompts.length, prompts + 1);
-  } finally { await runtime.close(); }
+  } finally {
+    try { await runtime.close(); }
+    finally { await rm(directory, { recursive: true, force: true }); }
+  }
 });
 
 test("an unconfirmed model switch ends the chat instead of showing stale settings on a live runtime", async () => {
@@ -150,7 +168,7 @@ test("one Pair streams text and bounded source excerpts without replaying its fi
   assert.equal(cleanup, 1);
 });
 
-test("grep provenance names the actual Driver operands for both single and multiple paths", async () => {
+test("grep and rg provenance name the actual Driver operands for single and multiple paths", async () => {
   const directory = await mkdtemp(path.resolve(".source-provenance-"));
   try {
     const root = path.join(directory, "project");
@@ -163,11 +181,14 @@ test("grep provenance names the actual Driver operands for both single and multi
     await writeFile(artifact, "Synthetic artifact");
     const policy = await createReadPolicy(root);
     await policy.setDriver({ directory: driver, sessionId: "driver", title: "Driver" });
-    for (const paths of [[log], [log, artifact]]) {
+    for (const { name, paths } of [
+      { name: "grep", paths: [log] }, { name: "grep", paths: [log, artifact] },
+      { name: "rg", paths: [log] }, { name: "rg", paths: [log, artifact] },
+    ]) {
       const session = new FakeSession();
       session.onSend = () => {
         session.emit("tool.execution_start", {
-          toolCallId: "search", toolName: "grep", arguments: { pattern: ".", paths },
+          toolCallId: "search", toolName: name, arguments: { pattern: ".", paths },
         });
         session.emit("tool.execution_complete", {
           toolCallId: "search", success: true, result: { content: "Synthetic search result" },
@@ -183,7 +204,7 @@ test("grep provenance names the actual Driver operands for both single and multi
             assert.equal(delta.message.partial, true);
           }
         }
-        assert.deepEqual(sources, [`grep: ${paths.map(file => pathToFileURL(file).href).join(", ")}`]);
+        assert.deepEqual(sources, [`${name}: ${paths.map(file => pathToFileURL(file).href).join(", ")}`]);
       } finally { await runtime.close(); }
     }
   } finally { await rm(directory, { recursive: true, force: true }); }

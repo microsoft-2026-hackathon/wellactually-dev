@@ -7,6 +7,15 @@ export const MAX_TOOL_TEXT = 12_000;
 export const READ_TOOLS = ["view", "grep"] as const;
 const MAX_SEARCH_PATHS = 256;
 
+export function isReadTool(name: string): boolean {
+  return name === "view" || name === "grep" || name === "rg";
+}
+
+export function isReadToolInventory(names: readonly string[] | undefined): boolean {
+  return !!names && names.length === 2 && names.includes("view") &&
+    (names.includes("grep") || names.includes("rg")) && names.every(isReadTool);
+}
+
 /** UTF-8 바이트 상한 안에서 문자 경계를 보존해 도구 출력을 자르고, 잘림 여부를 함께 반환한다. */
 export function boundedToolText(value: string): { text: string; truncated: boolean } {
   if (Buffer.byteLength(value, "utf8") <= MAX_TOOL_TEXT) return { text: value, truncated: false };
@@ -77,7 +86,7 @@ export async function createReadPolicy(workspaceDirectory: string): Promise<Read
   async function sourceFiles(tool: string, args: unknown): Promise<readonly string[]> {
     const toolArguments = object(args);
     if (tool === "view") return [await safePath(toolArguments.path)];
-    if (tool === "grep") return searchPaths(toolArguments.paths);
+    if (tool === "grep" || tool === "rg") return searchPaths(toolArguments.paths);
     throw new Error("READ_TOOL_DENIED");
   }
 
@@ -85,7 +94,7 @@ export async function createReadPolicy(workspaceDirectory: string): Promise<Read
     /** 실행 직전 도구·옵션·경로를 검사하고 읽기 범위와 검색 결과 수가 제한된 인수로 교체한다. */
     async onPreToolUse(input) {
       try {
-        if (!(READ_TOOLS as readonly string[]).includes(input.toolName)) throw new Error("READ_TOOL_DENIED");
+        if (!isReadTool(input.toolName)) throw new Error("READ_TOOL_DENIED");
         const args = object(input.toolArgs);
         const files = await sourceFiles(input.toolName, args);
         if (input.toolName === "view") {

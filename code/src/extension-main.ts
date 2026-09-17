@@ -156,8 +156,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
       selectingDriver: driverSelection.active,
       model: {
         id: modelSelection.modelId,
-        name: availableModels.find(item => item.id === modelSelection.modelId)?.name ??
-          (modelSelection.modelId === DEFAULT_PAIR_MODEL ? "Claude Haiku 4.5" : modelSelection.modelId),
+        name: availableModels.find(item => item.id === modelSelection.modelId)?.name ?? modelSelection.modelId,
         reasoningEffort: modelSelection.reasoningEffort ?? null,
         reasoningAvailable: availableModels.length
           ? !!availableModels.find(item => item.id === modelSelection.modelId)?.reasoningEfforts.length : null,
@@ -295,7 +294,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
           const current = validateModelSelection(modelSelection, availableModels);
           if (!current.reasoningEfforts.length) throw new Error("COACH_REASONING_UNAVAILABLE");
           const labels: Record<ReasoningEffort, HostMessage> = {
-            low: "reasoningLow", medium: "reasoningMedium", high: "reasoningHigh",
+            none: "reasoningNone", low: "reasoningLow", medium: "reasoningMedium", high: "reasoningHigh",
             xhigh: "reasoningXhigh", max: "reasoningMax",
           };
           const selected = await vscode.window.showQuickPick(current.reasoningEfforts.map(effort => ({

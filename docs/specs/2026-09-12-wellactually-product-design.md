@@ -111,6 +111,9 @@ The input area follows familiar Copilot Chat placement: one rounded composer
 with a read-only Pair role marker, model/reasoning selectors and send/stop
 controls. Do not imply Agent execution, attachments or other unsupported modes.
 Use SDK model metadata and supported effort levels rather than inventing options.
+Honor runtime-supported `none` even when the pinned SDK's TypeScript enum lags
+the model RPC. Treat `grep` and its model-specific `rg` alias as the same bounded
+read-only search capability, while still rejecting any extra tool capabilities.
 An idle model change preserves the same SDK conversation, transcript and Driver
 scope and affects the next human message. Persist choices per workspace.
 Only publish a successful live change after confirming SDK model state; report
@@ -125,7 +128,9 @@ Use discussion/message wording in the composer. Keep the first-message
 project-sharing disclosure and meaningful operational notices/errors.
 
 Product controls, native contribution captions, host messages and Pair
-responses are Korean-only, independent of the editor locale. There is no
+responses use Korean, independent of the editor locale. The composer placeholder
+is the explicitly requested branding exception: `Pair Programming with WellActually...`.
+There is no
 language preference or selector. Preserve original code, identifiers and
 quoted source excerpts; do not translate them in place. Keep drafts, caret,
 scroll and history through normal updates.
@@ -147,7 +152,8 @@ Memory and cross-session search remain disabled. Compaction is not guaranteed
 verbatim recall. Ending deletes only owned temporary runtime data after
 verified cleanup; arbitrary host-restart continuity is not promised.
 
-Allow read-only `view` and `grep` on the current project and selected Driver.
+Allow read-only `view` and search (`grep` or its model-specific `rg` alias) on
+the current project and selected Driver.
 For SDK sessions, authorize the entire dedicated Driver session directory.
 For standard VS Code Copilot Chat, authorize its exact original JSON/JSONL
 transcript and session-specific `chatEditingSessions/<sessionId>` tree if present.

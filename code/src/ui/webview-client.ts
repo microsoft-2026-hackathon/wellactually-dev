@@ -115,6 +115,10 @@ export class QuestionDraft {
 
 export interface WebviewApi { postMessage(command: ViewCommand): void }
 
+export function hasMessageText(value: string): boolean {
+  return value.trim().length > 0;
+}
+
 interface PickerControlState {
   label: string;
   accessibleName: string;
@@ -123,7 +127,7 @@ interface PickerControlState {
 }
 
 const reasoningMessages: Record<ReasoningEffort, UiMessage> = {
-  low: "reasoningLow", medium: "reasoningMedium", high: "reasoningHigh",
+  none: "reasoningNone", low: "reasoningLow", medium: "reasoningMedium", high: "reasoningHigh",
   xhigh: "reasoningXhigh", max: "reasoningMax",
 };
 
@@ -339,7 +343,7 @@ export function mountCoachView(doc: Document, api: WebviewApi): { receive(event:
     const controls = composerControlState(state, !!replies.reply || draft.waiting);
     const driverControls = driverControlState(state, controls.working);
     question.disabled = controls.inputDisabled;
-    element<HTMLButtonElement>("send-question").disabled = controls.sendDisabled;
+    element<HTMLButtonElement>("send-question").disabled = controls.sendDisabled || !hasMessageText(question.value);
     visible("send-question", !controls.stopVisible);
     visible("stop-reply", controls.stopVisible);
     visible("question-form", !controls.ended);
@@ -487,6 +491,9 @@ export function mountCoachView(doc: Document, api: WebviewApi): { receive(event:
       form.requestSubmit();
     }
   }
+  function onComposerInput(): void {
+    renderControls();
+  }
   /** Escape 입력으로 열린 설정창이나 대화 작업 메뉴를 닫고 메뉴 포커스를 복원한다. */
   function onKey(event: KeyboardEvent): void {
     if (event.key === "Escape" && settings.open) {
@@ -548,6 +555,7 @@ export function mountCoachView(doc: Document, api: WebviewApi): { receive(event:
   renderControls();
   form.addEventListener("submit", submit);
   question.addEventListener("keydown", onComposerKey);
+  question.addEventListener("input", onComposerInput);
   settings.addEventListener("close", onDialogClose);
   scroll.addEventListener("scroll", onScroll);
   doc.addEventListener("click", click);
@@ -560,6 +568,7 @@ export function mountCoachView(doc: Document, api: WebviewApi): { receive(event:
       resize.disconnect();
       form.removeEventListener("submit", submit);
       question.removeEventListener("keydown", onComposerKey);
+      question.removeEventListener("input", onComposerInput);
       settings.removeEventListener("close", onDialogClose);
       scroll.removeEventListener("scroll", onScroll);
       doc.removeEventListener("click", click);

@@ -75,7 +75,7 @@ export function createWebviewHtml(options: WebviewHtmlOptions): string {
     <form id="question-form" class="chat-composer" novalidate>
       <label class="sr-only" for="coach-question">${tx("askLabel")}</label>
       <div class="composer-input">
-        <textarea id="coach-question" name="question" rows="3" required aria-describedby="composer-state question-error composer-keyboard-hint" placeholder="${tx("composerPlaceholder")}" disabled></textarea>
+        <textarea id="coach-question" name="question" rows="1" required aria-describedby="composer-state question-error composer-keyboard-hint" placeholder="${tx("composerPlaceholder")}" disabled></textarea>
         <div class="composer-bottom">
           <div id="model-controls" class="composer-selectors" role="group" aria-label="${tx("modelControls")}" aria-busy="false">
             <span class="composer-role" title="${tx("pairRoleHelp")}">${tx("pairRole")}</span>

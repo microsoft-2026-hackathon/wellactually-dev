@@ -1,5 +1,6 @@
 import type { ModelInfo } from "@github/copilot-sdk";
-export type ReasoningEffort = NonNullable<ModelInfo["supportedReasoningEfforts"]>[number];
+// SDK 1.0.13's RPC advertises "none", but its exported model-info enum omits it.
+export type ReasoningEffort = "none" | NonNullable<ModelInfo["supportedReasoningEfforts"]>[number];
 
 export interface SdkDriverSource {
   kind?: "sdk";
