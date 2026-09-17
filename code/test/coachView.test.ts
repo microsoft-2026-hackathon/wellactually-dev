@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { composerControlState, createReplyState, driverControlState, QuestionDraft, reduceReply } from "../src/ui/webview-client.js";
+import { composerControlState, createReplyState, driverControlState, hasMessageText, QuestionDraft, reduceReply } from "../src/ui/webview-client.js";
 import type { ViewState } from "../src/ui/messages.js";
 
 function view(overrides: Partial<ViewState> = {}): ViewState {
@@ -38,6 +38,7 @@ test("composer renders current SDK model names and Korean reasoning levels with 
   assert.equal(initial.sendDisabled, false);
   assert.equal(initial.stopVisible, false);
   for (const [effort, label] of [
+    ["none", "사용 안 함"],
     ["low", "낮음"], ["medium", "보통"], ["high", "높음"], ["xhigh", "매우 높음"], ["max", "최대"],
   ] as const) {
     const controls = composerControlState(view({
@@ -52,6 +53,14 @@ test("composer renders current SDK model names and Korean reasoning levels with 
   const named = composerControlState(view({ model: { ...view().model, name: originalName } }));
   assert.equal(named.model.label, originalName);
   assert.equal(named.model.accessibleName, `모델 선택 · 현재 ${originalName}`);
+  const withoutMetadata = composerControlState(view({ model: { ...view().model, name: "" } }));
+  assert.equal(withoutMetadata.model.label, "claude-haiku-4.5");
+  assert.equal(withoutMetadata.model.accessibleName, "모델 선택 · 현재 claude-haiku-4.5");
+});
+
+test("send activation follows the current text including whitespace-only edits", () => {
+  for (const blank of ["", " ", "\n\t", "\u3000"]) assert.equal(hasMessageText(blank), false);
+  for (const message of ["hello", "한", "\n message \n"]) assert.equal(hasMessageText(message), true);
 });
 
 test("unavailable reasoning selection describes model-provided behavior without disabling model or send", () => {

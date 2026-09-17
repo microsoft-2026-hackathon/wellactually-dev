@@ -1,10 +1,13 @@
-import type { ModelInfo } from "@github/copilot-sdk";
 import type { ModelSelection, PairModel, ReasoningEffort } from "../contracts.js";
 import { isRecord } from "../validation.js";
 
 export const DEFAULT_PAIR_MODEL = "claude-haiku-4.5";
 const modelIdPattern = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$/;
-const efforts: readonly ReasoningEffort[] = ["low", "medium", "high", "xhigh", "max"];
+const efforts: readonly ReasoningEffort[] = ["none", "low", "medium", "high", "xhigh", "max"];
+
+function isReasoningEffort(value: unknown): value is ReasoningEffort {
+  return efforts.some(effort => effort === value);
+}
 
 export function readModelSelection(value: unknown): ModelSelection {
   if (!isRecord(value) || typeof value.modelId !== "string" || !modelIdPattern.test(value.modelId)) {
@@ -17,19 +20,25 @@ export function readModelSelection(value: unknown): ModelSelection {
   return { modelId: value.modelId, ...(reasoningEffort ? { reasoningEffort } : {}) };
 }
 
-export function pairModels(models: readonly ModelInfo[]): PairModel[] {
+export function pairModels(models: readonly unknown[]): PairModel[] {
   const result: PairModel[] = [];
   for (const model of models) {
-    if (model.policy?.state === "disabled") continue;
-    if (!modelIdPattern.test(model.id) || !model.name?.trim()) throw new Error("COACH_MODEL_CATALOG_INVALID");
-    const supported = model.capabilities.supports.reasoningEffort ? model.supportedReasoningEfforts ?? [] : [];
-    if (supported.some(effort => !efforts.includes(effort)) ||
-        (model.defaultReasoningEffort && !supported.includes(model.defaultReasoningEffort))) {
+    if (!isRecord(model)) throw new Error("COACH_MODEL_CATALOG_INVALID");
+    if (isRecord(model.policy) && model.policy.state === "disabled") continue;
+    if (typeof model.id !== "string" || !modelIdPattern.test(model.id) ||
+        typeof model.name !== "string" || !model.name.trim()) throw new Error("COACH_MODEL_CATALOG_INVALID");
+    const capabilities = isRecord(model.capabilities) && isRecord(model.capabilities.supports)
+      ? model.capabilities.supports : undefined;
+    if (!capabilities && model.id !== "auto") throw new Error("COACH_MODEL_CATALOG_INVALID");
+    const supported: unknown = capabilities?.reasoningEffort === true ? model.supportedReasoningEfforts ?? [] : [];
+    if (!Array.isArray(supported) || !supported.every(isReasoningEffort) ||
+        (model.defaultReasoningEffort !== undefined && model.defaultReasoningEffort !== null &&
+          (!isReasoningEffort(model.defaultReasoningEffort) || !supported.includes(model.defaultReasoningEffort)))) {
       throw new Error("COACH_MODEL_CATALOG_INVALID");
     }
     result.push({
       id: model.id, name: model.name, reasoningEfforts: [...new Set(supported)],
-      ...(model.defaultReasoningEffort ? { defaultReasoningEffort: model.defaultReasoningEffort } : {}),
+      ...(isReasoningEffort(model.defaultReasoningEffort) ? { defaultReasoningEffort: model.defaultReasoningEffort } : {}),
     });
   }
   if (!result.length) throw new Error("COACH_MODEL_CATALOG_EMPTY");

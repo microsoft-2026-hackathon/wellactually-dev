@@ -45,3 +45,20 @@ test("saved selections and inconsistent model capabilities fail explicitly", () 
   assert.throws(() => pairModels([model({ defaultReasoningEffort: "medium" })]), /COACH_MODEL_CATALOG_INVALID/);
   assert.throws(() => pairModels([model({ id: "invalid\nid" })]), /COACH_MODEL_CATALOG_INVALID/);
 });
+
+test("the live SDK catalog can contain Auto metadata and none reasoning beyond its TypeScript enum", () => {
+  const catalog = pairModels([
+    { id: "auto", name: "Auto", capabilities: { supports: {}, limits: {} } },
+    {
+      id: "synthetic-live", name: "Synthetic live model",
+      capabilities: { supports: { reasoningEffort: true }, limits: {} },
+      supportedReasoningEfforts: ["none", "low", "medium", "high", "xhigh", "max"],
+      policy: { state: "enabled" },
+    },
+  ]);
+  assert.equal(catalog.length, 2);
+  assert.deepEqual(catalog[0]?.reasoningEfforts, []);
+  assert.deepEqual(catalog[1]?.reasoningEfforts, ["none", "low", "medium", "high", "xhigh", "max"]);
+  const selection = readModelSelection({ modelId: "synthetic-live", reasoningEffort: "none" });
+  assert.equal(validateModelSelection(selection, catalog).id, "synthetic-live");
+});

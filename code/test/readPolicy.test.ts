@@ -3,7 +3,14 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { PermissionRequest } from "@github/copilot-sdk";
-import { boundedToolText, canonicalPathAllowed, createReadPolicy } from "../src/runtime/readPolicy.js";
+import { boundedToolText, canonicalPathAllowed, createReadPolicy, isReadToolInventory } from "../src/runtime/readPolicy.js";
+
+test("model-specific grep and rg aliases are accepted without allowing any additional tools", () => {
+  for (const names of [["view", "grep"], ["rg", "view"]]) assert.equal(isReadToolInventory(names), true);
+  for (const names of [undefined, [], ["view"], ["view", "bash"], ["view", "edit"], ["view", "grep", "rg"]]) {
+    assert.equal(isReadToolInventory(names), false);
+  }
+});
 
 test("the complete project tree permits directory listings, hidden files and arbitrary extensions", async () => {
   const root = await mkdtemp(path.resolve(".complete-project-"));

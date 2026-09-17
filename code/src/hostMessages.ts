@@ -30,7 +30,7 @@ const messages = {
   chooseReasoning: "추론 수준 선택",
   modelNextMessage: "대화와 드라이버 연결은 유지하고 다음 메시지부터 적용합니다.",
   selectedOption: "현재 선택",
-  reasoningLow: "낮음", reasoningMedium: "보통", reasoningHigh: "높음",
+  reasoningNone: "사용 안 함", reasoningLow: "낮음", reasoningMedium: "보통", reasoningHigh: "높음",
   reasoningXhigh: "매우 높음", reasoningMax: "최대",
   reasoningUnavailable: "이 모델은 선택 가능한 추론 수준을 제공하지 않습니다 ({code}). 모델의 기본 설정을 사용합니다.",
   modelSwitchFailed: "모델 변경을 확인하지 못해 현재 대화를 종료했습니다 ({code}). 새 대화에서 다시 선택하세요.",

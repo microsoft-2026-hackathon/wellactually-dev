@@ -3,7 +3,7 @@ import { pathToFileURL } from "node:url";
 import type { SessionEvent } from "@github/copilot-sdk";
 import type { CoachDelta, CoachRuntime, DriverSource, ModelSelection, PairModel, ReasoningEffort } from "../contracts.js";
 import { DEFAULT_PAIR_MODEL, pairModels, readModelSelection, validateModelSelection } from "./models.js";
-import { boundedToolText, READ_TOOLS, type ReadPolicy } from "./readPolicy.js";
+import { boundedToolText, isReadTool, type ReadPolicy } from "./readPolicy.js";
 import {
   assertSessionTools,
   createAuthenticatedClient,
@@ -41,18 +41,28 @@ export async function createCoachRuntime(options: {
       options.workspace,
       ownedRuntimeDirectory(client),
       selection.modelId,
-      selection.reasoningEffort,
+      selection.reasoningEffort === "none" ? undefined : selection.reasoningEffort,
     );
     await policy.setDriver(options.driver ?? null);
     const session = await createSessionWithDeadline(client, config);
 
     try {
+      if (selection.reasoningEffort === "none") {
+        // Apply the RPC-supported value before the first turn; SessionConfig's TS enum predates it.
+        await deadline(session.rpc.model.setReasoningEffort({ reasoningEffort: "none" }),
+          15_000, "COACH_MODEL_SWITCH_TIMEOUT");
+        const current = await session.rpc.model.getCurrent();
+        if (current.reasoningEffort !== "none") throw new Error("COACH_MODEL_SWITCH_UNCONFIRMED");
+      }
       await assertSessionTools(session);
       return attachCoachRuntime(session, policy, () => stopClient(client), 60_000, {
         listModels: loadModels,
         async setModel(next) {
-          await session.setModel(next.modelId,
-            next.reasoningEffort ? { reasoningEffort: next.reasoningEffort } : {});
+          const switched = await session.rpc.model.switchTo({
+            modelId: next.modelId,
+            ...(next.reasoningEffort ? { reasoningEffort: next.reasoningEffort } : {}),
+          });
+          if (switched.deferred) throw new Error("COACH_MODEL_SWITCH_UNCONFIRMED");
           const current = await session.rpc.model.getCurrent();
           if (current.modelId !== next.modelId ||
               (next.reasoningEffort && current.reasoningEffort !== next.reasoningEffort)) {
@@ -287,9 +297,8 @@ export function attachCoachRuntime(
       const excerpt = boundedToolText(content);
       if (!excerpt.text.trim()) return;
 
-      const source = read.name === "grep"
-        ? `grep: ${sourceFiles.map(file => pathToFileURL(file).href).join(", ")}`
-        : pathToFileURL(sourceFiles[0]!).href;
+      const source = read.name === "view" ? pathToFileURL(sourceFiles[0]!).href
+        : `${read.name}: ${sourceFiles.map(file => pathToFileURL(file).href).join(", ")}`;
       enqueueDelta({
         kind: "source",
         message: {
@@ -341,7 +350,7 @@ export function attachCoachRuntime(
           case "tool.execution_start": {
             if (event.data.parentToolCallId) return;
             const { toolCallId, toolName, arguments: toolArguments } = event.data;
-            if (typeof toolCallId !== "string" || !(READ_TOOLS as readonly string[]).includes(toolName)) {
+            if (typeof toolCallId !== "string" || !isReadTool(toolName)) {
               throw new Error("COACH_TOOL_POLICY_VIOLATION");
             }
             // A planning message cannot stand in for the answer after this tool work.

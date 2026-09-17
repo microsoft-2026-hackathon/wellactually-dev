@@ -3,7 +3,7 @@ import path from "node:path";
 import {
   CopilotClient, RuntimeConnection, type CopilotClientOptions, type CopilotSession, type SessionConfig,
 } from "@github/copilot-sdk";
-import { canonicalPathAllowed, READ_TOOLS, createReadPolicy, type ReadPolicy } from "./readPolicy.js";
+import { canonicalPathAllowed, READ_TOOLS, createReadPolicy, isReadToolInventory, type ReadPolicy } from "./readPolicy.js";
 import type { PairModel, ReasoningEffort } from "../contracts.js";
 import { DEFAULT_PAIR_MODEL, pairModels } from "./models.js";
 
@@ -250,7 +250,7 @@ export async function listPairModels(
 /** Check storage isolation and configure the Pair's read-only tools, permissions and persona. */
 export async function readSessionConfig(
   workspaceDirectory: string, isolatedDirectory: string, model = DEFAULT_PAIR_MODEL,
-  reasoningEffort?: ReasoningEffort,
+  reasoningEffort?: Exclude<ReasoningEffort, "none">,
 ): Promise<{ config: SessionConfig; policy: ReadPolicy }> {
   const policy = await createReadPolicy(workspaceDirectory);
   const isolated = await realpath(isolatedDirectory);
@@ -322,7 +322,7 @@ export async function assertSessionTools(session: CopilotSession): Promise<void>
   await deadline(session.rpc.tools.initializeAndValidate(), 10_000, "COACH_TOOL_INIT_TIMEOUT");
   const metadata = await deadline(session.rpc.tools.getCurrentMetadata(), 10_000, "COACH_TOOL_LIST_TIMEOUT");
   const tools = metadata.tools?.map(tool => tool.name).sort();
-  if (!tools || JSON.stringify(tools) !== JSON.stringify([...READ_TOOLS].sort())) {
+  if (!isReadToolInventory(tools)) {
     throw new Error("COACH_SESSION_TOOL_MISMATCH");
   }
 }

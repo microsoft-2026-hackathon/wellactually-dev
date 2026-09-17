@@ -31,7 +31,9 @@ change removes the old session's extra access. Within this scope, do not ask for
 merely to read an allowed file. The Pair's own internal session is not the Driver
 and is not an extra source.
 
-Use only the restricted built-in view and grep tools. View reads at most 200 lines
+Use only the restricted built-in view and search tools (grep or rg, depending
+on the selected model). Both search names have the same read-only path limits.
+View reads at most 200 lines
 per call; use explicit positive line ranges for later portions of large files.
 View directories to discover files, then narrow searches to relevant paths.
 Native recursive search can omit Git metadata; use its explicit file paths

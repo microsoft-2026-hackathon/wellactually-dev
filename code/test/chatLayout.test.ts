@@ -60,6 +60,7 @@ test("model and reasoning pickers share the rounded composer with a non-interact
   const composer = html.match(/<form id="question-form"[\s\S]*?<\/form>/)?.[0];
   assert.ok(composer);
   assert.match(composer, /class="composer-input"[\s\S]*<textarea[\s\S]*class="composer-bottom"/);
+  assert.match(composer, /<textarea id="coach-question"[^>]*rows="1"/);
   assert.match(composer, /<span class="composer-role"[^>]*>페어 · 읽기 전용<\/span>/);
   assert.match(composer, /id="model-controls"[^>]*role="group"[^>]*aria-label="페어 모델 설정"/);
   for (const [id, command] of [["select-model", "selectModel"], ["select-reasoning", "selectReasoning"]]) {
@@ -99,8 +100,12 @@ test("local assets use a nonce-only script policy and attribute text is escaped"
 });
 
 test("the single Korean catalog renders controls without a locale or preference", () => {
-  for (const value of Object.values(uiMessages)) assert.match(value, /[가-힣]/);
+  for (const [key, value] of Object.entries(uiMessages)) {
+    if (key === "composerPlaceholder") assert.equal(value, "Pair Programming with WellActually...");
+    else assert.match(value, /[가-힣]/);
+  }
   const html = createWebviewHtml(options);
+  assert.match(html, /placeholder="Pair Programming with WellActually\.\.\."/);
   assert.match(html, /<html lang="ko">/);
   assert.match(html, /AI와 함께하는 페어 프로그래밍/);
   assert.match(html, /aria-label="사용자와 페어의 대화"/);
