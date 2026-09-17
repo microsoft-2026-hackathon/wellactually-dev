@@ -18,6 +18,8 @@ disable-model-invocation: true
 # Wellactually Beginner Mode
 
 Follow the shared [Wellactually Navigator Policy](../instructions/wellactually-navigator.instructions.md).
+Before task exploration, read that policy if its content is not already in
+context. Loading a Skill or Reference does not replace the shared policy.
 
 The user may not yet know the vocabulary, concepts, constraints, or questions
 needed to develop the task. Help them participate in the judgment without

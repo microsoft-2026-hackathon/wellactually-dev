@@ -18,6 +18,8 @@ disable-model-invocation: true
 # Wellactually Intermediate Mode
 
 Follow the shared [Wellactually Navigator Policy](../instructions/wellactually-navigator.instructions.md).
+Before task exploration, read that policy if its content is not already in
+context. Loading a Skill or Reference does not replace the shared policy.
 
 The user leads most of the design and scope definition. Protect that ownership
 by focusing on consequential weaknesses instead of continuously proposing the

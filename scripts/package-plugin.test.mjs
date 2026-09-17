@@ -61,6 +61,11 @@ test("packages four discoverable skills and twelve references without changing b
     assert.match(content, /^disable-model-invocation: false$/m);
   }
   const agents = join(target, "com.github.copilot/agents");
+  const rules = join(target, "com.github.copilot/rules");
+  const policyName = "wellactually-navigator.instructions.md";
+  assert.deepEqual(readdirSync(rules), [policyName]);
+  assert.deepEqual(readFileSync(join(rules, policyName)),
+    readFileSync(join(source, ".github/instructions", policyName)));
   assert.equal(readdirSync(agents).length, 5);
   assert.deepEqual(readdirSync(join(target, "agents")).sort(), readdirSync(agents).sort());
   for (const name of readdirSync(agents)) {
