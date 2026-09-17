@@ -1,0 +1,17 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "wellactually",
+  "version": "0.1.0",
+  "description": "Progressive pair programming with AI for developers building engineering judgment while working with coding agents.",
+  "author": {
+    "name": "Wellactually"
+  },
+  "homepage": "https://github.com/microsoft-2026-hackathon/wellactually",
+  "repository": "https://github.com/microsoft-2026-hackathon/wellactually",
+  "keywords": [
+    "pair-programming",
+    "coding-agents",
+    "engineering-judgment",
+    "developer-learning"
+  ]
+}

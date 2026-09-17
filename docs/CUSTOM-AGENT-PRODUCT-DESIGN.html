@@ -691,8 +691,8 @@
         <p class="toc-title">Contents</p>
         <ol>
           <li><a href="#purpose">목적</a></li>
-          <li><a href="#agent-host">Agent Host 구성</a></li>
-          <li><a href="#driver-flow">Driver Chat 생성과 사용 흐름</a></li>
+          <li><a href="#agent-host">기본 Chat View와 Agent Host 구성</a></li>
+          <li><a href="#driver-flow">Driver 세션 생성과 사용 흐름</a></li>
           <li><a href="#agent-body">Custom Agent 본문</a></li>
           <li><a href="#frontmatter">Frontmatter 설정</a></li>
           <li><a href="#instructions">Instructions</a></li>
@@ -723,8 +723,8 @@
           <summary>목차 열기</summary>
           <ol>
             <li><a href="#purpose">목적</a></li>
-            <li><a href="#agent-host">Agent Host 구성</a></li>
-            <li><a href="#driver-flow">Driver Chat 생성과 사용 흐름</a></li>
+            <li><a href="#agent-host">기본 Chat View와 Agent Host 구성</a></li>
+            <li><a href="#driver-flow">Driver 세션 생성과 사용 흐름</a></li>
             <li><a href="#agent-body">Custom Agent 본문</a></li>
             <li><a href="#frontmatter">Frontmatter 설정</a></li>
             <li><a href="#instructions">Instructions</a></li>
@@ -741,8 +741,9 @@
           <section id="purpose">
             <h2><span class="section-number">01</span><span>목적</span></h2>
             <p class="lede">
-              Wellactually의 첫 제품 형태는 별도 Chat UI가 아니라 VS Code의
-              Custom Agent와 Agent Host를 사용한다.
+              Wellactually의 첫 제품 형태는 별도 Chat UI나 Agents Window가
+              아니라 VS Code의 기본 Chat View, Custom Agent와 Agent Host를
+              사용한다.
             </p>
             <p>
               제품은 Pair와 Driver의 대화를 분리하면서도, Pair가 Driver의 작업
@@ -753,25 +754,29 @@
 
           <section id="agent-host">
             <h2>
-              <span class="section-number">02</span><span>Agent Host 구성</span>
+              <span class="section-number">02</span
+              ><span>기본 Chat View와 Agent Host 구성</span>
             </h2>
-            <p>하나의 Agent Host 세션 안에 Pair Chat과 Driver Chat을 둔다.</p>
+            <p>
+              기본 Chat View의 Sessions 목록에 서로 독립된 Pair와 Driver Agent
+              Host 세션을 둔다.
+            </p>
 
-            <div class="architecture" aria-label="Agent Host Chat 구성">
+            <div class="architecture" aria-label="Agent Host 세션 구성">
               <div class="chat-panel">
-                <span class="label">Agent Host Session / Chat A</span>
-                <h3>Pair Chat</h3>
+                <span class="label">Default Chat View / Session A</span>
+                <h3>Pair 세션</h3>
                 <ul>
                   <li>사용자가 페어링 mode를 선택한다.</li>
                   <li>문제, 방향과 Scope을 함께 논의한다.</li>
-                  <li>Driver Chat과 Workspace 상태를 읽는다.</li>
+                  <li>Driver 세션과 Workspace 상태를 읽는다.</li>
                 </ul>
               </div>
               <div class="chat-panel driver">
-                <span class="label">Agent Host Session / Chat B</span>
-                <h3>Driver Chat</h3>
+                <span class="label">Default Chat View / Session B</span>
+                <h3>Driver 세션</h3>
                 <ul>
-                  <li>Pair가 최초 한 번 생성한다.</li>
+                  <li>Pair가 독립 세션으로 최초 한 번 생성한다.</li>
                   <li>사용자가 Wellactually Driver를 선택한다.</li>
                   <li>사용자가 직접 구현 지시를 입력한다.</li>
                 </ul>
@@ -779,21 +784,29 @@
             </div>
 
             <p>
-              두 Chat은 서로의 대화 기록을 자동으로 상속하지 않는다. 대신 같은
-              Agent Host 세션에 속하므로 Workspace와 worktree를 공유한다.
+              두 세션은 대화 기록, Context Window와 생명주기를 공유하지 않는다.
+              Driver 세션은 Pair가 <code>relationship: independent</code>, Pair
+              세션의 정확한 Workspace 경로, <code>worktree: false</code>로
+              생성한다. 따라서 두 세션은 같은 실제 Workspace를 직접 사용한다.
               Driver가 변경한 코드는 Pair가 Workspace에서 확인할 수 있고, Pair는
-              Agent Host의 세션 관리 도구를 사용해 Driver Chat의 최근 대화
-              맥락도 읽을 수 있다.
+              Agent Host의 세션 관리 도구로 Driver 세션의 최근 대화 맥락도 읽을
+              수 있다.
             </p>
 
-            <div class="access-flow" aria-label="Chat 간 데이터 접근 방향">
-              <strong>Pair Chat</strong>
+            <p>
+              사용자는 기본 Chat View의 Sessions 목록에서 Pair와 Driver 세션을
+              전환한다. Agents Window, 화면 분할, 동시 표시나 병렬 실행은 제품
+              흐름에 필요하지 않다.
+            </p>
+
+            <div class="access-flow" aria-label="세션 간 데이터 접근 방향">
+              <strong>Pair 세션</strong>
               <span class="direction">읽기 →<br />← 접근 불가</span>
-              <strong>Driver Chat</strong>
+              <strong>Driver 세션</strong>
             </div>
 
             <p class="statement">
-              Pair는 Driver Chat에 메시지를 보내거나 작업을 위임하지 않는다.
+              Pair는 Driver 세션에 메시지를 보내거나 작업을 위임하지 않는다.
               Driver에게 어떤 작업을 맡길지 결정하고 실제 구현 지시를 작성하는
               주체는 사용자다.
             </p>
@@ -802,34 +815,41 @@
           <section id="driver-flow">
             <h2>
               <span class="section-number">03</span
-              ><span>Driver Chat 생성과 사용 흐름</span>
+              ><span>Driver 세션 생성과 사용 흐름</span>
             </h2>
             <ol class="workflow">
               <li>
                 <span
-                  >사용자가 Pair mode를 선택하고 Pair Chat에서 문제, 방향과
-                  Scope을 논의한다.</span
+                  >사용자가 기본 Chat View에서 Pair Agent Host 세션을 시작하고
+                  Pair mode를 선택해 문제, 방향과 Scope을 논의한다.</span
                 >
               </li>
               <li>
                 <span
-                  >Pair는 Agent Host의 <code>create_session</code> 도구를
-                  <code>currentSession</code> 관계로 호출해 같은 Agent Host 세션
-                  안에 Driver용 Chat을 만든다.</span
+                  >Pair는 <code>get_current_session</code>으로 자신의 정확한
+                  Workspace 경로를 확인한다.</span
                 >
               </li>
               <li>
                 <span
-                  ><code>create_session</code>에는 초기 프롬프트가 필수이므로,
+                  >Pair는 <code>create_session</code>을
+                  <code>relationship: independent</code>, 확인한 Workspace 경로,
+                  <code>worktree: false</code>로 호출해 Driver Agent Host 세션을
+                  만든다.</span
+                >
+              </li>
+              <li>
+                <span
+                  ><code>create_session</code>에는 초기 프롬프트가 필수이므로
                   실제 작업을 지시하지 않는 짧은 안내를 넣는다.</span
                 >
-                <pre><code>Wellactually Driver 작업을 위한 Chat입니다.
-사용자가 직접 구현 지시를 전달할 때까지 기다리세요.</code></pre>
+                <pre><code>This is a Wellactually Driver session. Do not inspect or modify the workspace yet.
+Wait for the user to select Wellactually Driver and provide a direct implementation instruction.</code></pre>
               </li>
               <li>
                 <span
-                  >생성 결과에 포함된 <code>Open Session</code> 링크를 통해
-                  사용자가 Driver Chat을 연다.</span
+                  >생성된 Driver 세션은 기본 Chat View의 Sessions 목록에
+                  나타난다. 사용자는 해당 세션을 선택한다.</span
                 >
               </li>
               <li>
@@ -849,11 +869,14 @@
                 <span>Driver는 국소적인 설계, 구현과 검증을 수행한다.</span>
               </li>
               <li>
-                <span>사용자는 기존 Pair Chat으로 돌아가 논의를 계속한다.</span>
+                <span
+                  >사용자는 Sessions 목록에서 기존 Pair 세션으로 돌아가 논의를
+                  계속한다.</span
+                >
               </li>
               <li>
                 <span
-                  >Pair는 생성 시 받은 Driver Chat 링크로
+                  >Pair는 생성 시 받은 Driver 세션 식별자로
                   <code>get_session_context</code>를 호출해 사용자 지시, Driver
                   응답과 도구 사용 맥락을 읽고, Workspace의 실제 변경도
                   확인한다.</span
@@ -861,9 +884,9 @@
               </li>
             </ol>
             <p>
-              이 흐름은 필요한 만큼 반복할 수 있다. Pair가 Driver Chat을 다시
-              만들거나 기존 Driver Chat에 후속 메시지를 보내는 방식으로 반복하지
-              않는다. 사용자가 같은 Driver Chat에서 다음 구현 지시를 내리고
+              이 흐름은 필요한 만큼 반복할 수 있다. Pair가 Driver 세션을 다시
+              만들거나 기존 Driver 세션에 후속 메시지를 보내는 방식으로 반복하지
+              않는다. 사용자가 같은 Driver 세션에서 다음 구현 지시를 내리고
               Pair는 그 결과를 읽는다.
             </p>
           </section>
@@ -878,9 +901,9 @@
                 <h3>Pair mode</h3>
                 <p>네 mode는 하나의 Navigator 정체성과 역할 경계를 공유한다.</p>
                 <ul>
-                  <li>개입 빈도와 개입 기준</li>
-                  <li>우선하는 Navigator 상호작용 방식</li>
-                  <li>질문, 반례와 지식 제공의 구체성</li>
+                  <li>우선하는 Navigator 상호작용 방식과 사용 빈도</li>
+                  <li>질문, 반례와 지식 제공의 명시성 및 구체성</li>
+                  <li>개입 기준과 자제할 상황</li>
                   <li>사용자가 스스로 사고하도록 남겨 두는 범위</li>
                 </ul>
               </div>
@@ -889,7 +912,7 @@
                 <ul>
                   <li>사용자가 직접 전달한 구현 지시를 수행한다.</li>
                   <li>국소적인 설계, 코드 변경과 검증을 담당한다.</li>
-                  <li>Pair Chat을 읽거나 Pair를 호출하지 않는다.</li>
+                  <li>Pair 세션을 읽거나 Pair를 호출하지 않는다.</li>
                   <li>열린 제품 판단을 임의로 확정하지 않는다.</li>
                   <li>중요한 모호함은 사용자에게 돌려준다.</li>
                 </ul>
@@ -901,6 +924,13 @@
               <span>Intermediate mode</span>
               <span>Advanced mode</span>
             </div>
+            <p>
+              여섯 가지 상호작용 방식은 기여 방식과 개입 원칙처럼 별도 범주로
+              나누지 않는다. 하나의 공통 Instructions에서 의미를 정의하고, 모든
+              Pair mode가 같은 정의를 참조한다. 각 mode는 정의를 다시 만들지
+              않고 현재 지원 밀도에 맞게 우선순위, 빈도와 개입 기준만
+              구체화한다.
+            </p>
           </section>
 
           <section id="frontmatter">
@@ -914,13 +944,14 @@
             </p>
             <h3>Pair mode</h3>
             <pre><code>---
-name: Easy mode
+name: Wellactually Easy
 description: "사용자와 함께 설계와 구현 범위를 구체화하는 Wellactually Navigator"
 argument-hint: "현재 작업의 문제, 방향 또는 고민을 설명하세요."
 tools:
   - read
   - search
   - web
+  - get_current_session
   - create_session
   - list_sessions
   - get_session_context
@@ -961,15 +992,15 @@ disable-model-invocation: true
             <pre><code>.github/instructions/wellactually-navigator.instructions.md</code></pre>
             <ul>
               <li>사용자, Pair와 Driver의 역할 및 소유권</li>
-              <li>여섯 가지 Navigator 상호작용 방식</li>
+              <li>여섯 가지 Navigator 상호작용 방식의 공통 정의</li>
               <li>사용자가 판단과 Driver 지시를 직접 소유한다는 원칙</li>
               <li>
                 Pair가 완성된 설계나 구현 지시를 대신 작성하지 않는다는 경계
               </li>
               <li>Driver 결과를 채점하거나 승인하지 않는다는 경계</li>
-              <li>Driver Chat을 읽는 목적, 시점과 범위</li>
+              <li>Driver 세션을 읽는 목적, 시점과 범위</li>
               <li>
-                Driver Chat에 메시지를 보내거나 작업을 위임하지 않는다는 제한
+                Driver 세션에 메시지를 보내거나 작업을 위임하지 않는다는 제한
               </li>
               <li>수평적인 동료 관계와 mode에 관계없이 유지할 말투</li>
             </ul>
@@ -977,6 +1008,13 @@ disable-model-invocation: true
               Pair 전용 정책은 <code>AGENTS.md</code> 같은 전역 Instructions에
               넣지 않는다. 전역 적용 시 Driver에도 Navigator 정책이 섞일 수 있기
               때문이다.
+            </p>
+            <p>
+              여섯 가지 방식을 각각 별도 Instructions, Prompt 또는 Skill로
+              분리하지 않는다. 이들은 독립 실행하는 Workflow가 아니라 Pair가 매
+              응답에서 현재 맥락에 맞게 선택하는 기본 행동이다. 하나의 짧은 공통
+              정의를 유지하면 mode마다 같은 용어가 다른 의미로 변하는 것을 막을
+              수 있다.
             </p>
           </section>
 
@@ -989,7 +1027,12 @@ disable-model-invocation: true
                   <li><code>read</code>: 구현 결과와 프로젝트 문서</li>
                   <li><code>search</code>: 관련 코드, 계약과 제약</li>
                   <li><code>web</code>: 공식 문서와 공학 지식</li>
-                  <li><code>create_session</code>: Driver Chat 최초 생성</li>
+                  <li>
+                    <code>get_current_session</code>: 정확한 Workspace 경로 확인
+                  </li>
+                  <li>
+                    <code>create_session</code>: 독립 Driver 세션 최초 생성
+                  </li>
                   <li><code>list_sessions</code>: 세션 상태와 메타데이터</li>
                   <li><code>get_session_context</code>: Driver의 최근 대화</li>
                 </ul>
@@ -1013,7 +1056,7 @@ disable-model-invocation: true
               영향을 주었는지를 이해하는 보조 맥락으로 사용한다.
             </p>
             <p>
-              Pair에는 코드 편집, 명령 실행, 다른 Agent 호출, 다른 Chat으로
+              Pair에는 코드 편집, 명령 실행, 다른 Agent 호출, 다른 세션으로
               메시지를 보내는 도구를 제공하지 않는다. Driver에는 다른 Agent Host
               세션이나 Chat을 조회하고 읽고 제어하는 도구를 제공하지 않는다.
             </p>
@@ -1047,7 +1090,7 @@ disable-model-invocation: true
           <section id="mcp">
             <h2><span class="section-number">09</span><span>MCP</span></h2>
             <p class="lede">
-              MVP에는 MCP가 필요하지 않다. Driver Chat 접근에는 Agent Host 내장
+              MVP에는 MCP가 필요하지 않다. Driver 세션 접근에는 Agent Host 내장
               세션 관리 도구를 사용한다.
             </p>
             <p>
@@ -1091,7 +1134,7 @@ disable-model-invocation: true
               강제한다.
             </p>
             <ul>
-              <li>Pair가 Driver Chat을 둘 이상 생성한다.</li>
+              <li>Pair가 Driver 세션을 둘 이상 생성한다.</li>
               <li>허용하지 않은 세션 제어 동작을 시도한다.</li>
               <li>mode의 역할 경계를 벗어난 도구를 호출한다.</li>
             </ul>
@@ -1111,7 +1154,7 @@ disable-model-invocation: true
               <li>
                 <code>create_session</code>은 <code>prompt</code>와
                 <code>title</code>을 필수로 받고 생성 직후 첫 요청을 실행한다.
-                빈 Driver Chat만 만드는 동작은 현재 지원되지 않는다.
+                빈 Driver 세션만 만드는 동작은 현재 지원되지 않는다.
               </li>
               <li>
                 <code>create_session</code>은 모델을 지정할 수 있지만 Custom
@@ -1124,10 +1167,15 @@ disable-model-invocation: true
                 제공되는 계약은 아니다.
               </li>
               <li>
-                Pair가 특정 Driver Chat을 다시 읽으려면 생성 결과의 Chat별
-                <code>openLink</code>를 유지해야 한다. Context compaction이나
-                세션 복원 뒤에도 이 연결을 안정적으로 재사용할 수 있는지 실제
-                환경에서 검증해야 한다.
+                Pair가 특정 Driver 세션을 다시 읽으려면 생성 결과의 세션 식별자
+                또는 <code>openLink</code>를 유지해야 한다. 식별자를 잃었을 때는
+                유사한 이름으로 추측하지 않고 사용자에게 세션을 확인한다.
+              </li>
+              <li>
+                기본 Chat View에서 <code>relationship: independent</code>, 동일
+                Workspace, <code>worktree: false</code>로 만든 Driver 세션이
+                Sessions 목록에 나타나고, Pair가 그 세션의 사용자 프롬프트와
+                Driver 응답을 읽을 수 있음을 실제 환경에서 검증했다.
               </li>
               <li>
                 Agent Host와 세션 관리 기능은 개발 중인 Preview 표면이다. 지원
@@ -1151,7 +1199,8 @@ disable-model-invocation: true
                 <code>knowledge-compile</code> Skill
               </li>
               <li>
-                같은 Agent Host 세션 안에서 분리된 Pair Chat과 Driver Chat
+                기본 Chat View에서 같은 Workspace를 사용하는 독립 Pair·Driver
+                Agent Host 세션
               </li>
               <li>사용자가 직접 수행하는 Driver 선택과 구현 지시</li>
             </ul>
