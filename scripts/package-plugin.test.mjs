@@ -62,11 +62,16 @@ test("packages four discoverable skills and twelve references without changing b
   }
   const agents = join(target, "com.github.copilot/agents");
   assert.equal(readdirSync(agents).length, 5);
+  assert.deepEqual(readdirSync(join(target, "agents")).sort(), readdirSync(agents).sort());
   for (const name of readdirSync(agents)) {
     const original = readFileSync(join(source, ".github/agents", name), "utf8");
     assert.equal(readFileSync(join(agents, name), "utf8"), original.replaceAll(
       "../instructions/wellactually-navigator.instructions.md",
       "../rules/wellactually-navigator.instructions.md",
+    ));
+    assert.equal(readFileSync(join(target, "agents", name), "utf8"), original.replaceAll(
+      "../instructions/wellactually-navigator.instructions.md",
+      "../com.github.copilot/rules/wellactually-navigator.instructions.md",
     ));
   }
   assert.equal(JSON.parse(readFileSync(join(target, "plugin.json"), "utf8")).name, "wellactually");
@@ -85,11 +90,13 @@ test("repeat packaging is content-stable and cleans owned stale files only", (co
   assert.equal(packageInto(source, target).status, 0);
   assert.deepEqual(snapshot(target), before);
   writeFileSync(join(target, "skills/distributed-systems/references/stale.md"), "stale");
+  writeFileSync(join(target, "agents/stale.agent.md"), "stale");
   rmSync(join(source, ".github/skills/engineering-decisions"), { recursive: true });
   const result = packageInto(source, target);
   assert.equal(result.status, 0, result.stderr);
   assert.equal(existsSync(join(target, "skills/engineering-decisions")), false);
   assert.equal(existsSync(join(target, "skills/distributed-systems/references/stale.md")), false);
+  assert.equal(existsSync(join(target, "agents/stale.agent.md")), false);
   assert.equal(readFileSync(join(target, ".git/config"), "utf8"), "preserve git metadata");
   assert.equal(readFileSync(join(target, "release-notes.md"), "utf8"), "preserve unmanaged file");
 });
@@ -120,4 +127,44 @@ test("rejects output overlapping the source, including aliases", (context) => {
     assert.match(result.stderr, /must not overlap/);
   }
   assert.ok(existsSync(join(source, ".github/skills/engineering-decisions/SKILL.md")));
+});
+
+test("Copilot SDK discovers all five packaged agents", {
+  skip: !process.env.WELLACTUALLY_COPILOT_SDK,
+}, (context) => {
+  assert.ok(Number(process.versions.node.split(".")[0]) >= 22,
+    "The optional SDK check requires Node 22+ or the VS Code Node runtime.");
+  const { root, source, target } = fixture(context);
+  const packaged = packageInto(source, target);
+  assert.equal(packaged.status, 0, packaged.stderr);
+  const workspace = join(root, "workspace");
+  const home = join(root, "home");
+  mkdirSync(workspace);
+  mkdirSync(home);
+  const probe = `
+    import { pathToFileURL } from "node:url";
+    const [sdkPath, workspace, home, pluginPath] = process.argv.slice(1);
+    const { getCustomAgents } = await import(pathToFileURL(sdkPath).href);
+    const logger = { debug() {}, info() {}, warning() {}, error() {} };
+    const agents = await getCustomAgents(undefined, workspace, undefined, logger,
+      { configDir: home }, [{ name: "wellactually", marketplace: "_direct",
+        enabled: true, cache_path: pluginPath }]);
+    console.log(JSON.stringify(agents.map(agent => ({
+      name: agent.name, displayName: agent.displayName, path: agent.path,
+    }))));
+  `;
+  const result = spawnSync(process.execPath, ["--input-type=module", "-e", probe,
+    resolve(process.env.WELLACTUALLY_COPILOT_SDK), workspace, home, target], {
+    cwd: workspace,
+    env: { PATH: process.env.PATH, HOME: home, COPILOT_HOME: home, TMPDIR: tmpdir(),
+      ELECTRON_RUN_AS_NODE: "1" },
+    encoding: "utf8",
+    timeout: 30000,
+  });
+  assert.equal(result.status, 0, result.stderr || result.error?.message);
+  const agents = JSON.parse(result.stdout.trim());
+  const expectedNames = ["Wellactually Advanced", "Wellactually Beginner", "Wellactually Driver",
+    "Wellactually Easy", "Wellactually Intermediate"];
+  assert.deepEqual(agents.map(agent => agent.displayName).sort(), expectedNames,
+    `SDK discovered: ${JSON.stringify(agents)}`);
 });

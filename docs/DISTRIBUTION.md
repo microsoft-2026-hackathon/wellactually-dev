@@ -57,8 +57,10 @@ node scripts/package-plugin.mjs ../wellactually-plugin
 인자는 로컬 배포 저장소의 경로다. 폴더 이름은 자유롭다. 스크립트는 다음 작업을
 수행한다.
 
-1. `.github/agents`의 다섯 Agent를 `com.github.copilot/agents`로 복사한다.
+1. `.github/agents`의 다섯 Agent를 `com.github.copilot/agents`로 복사하고,
+   구형 Copilot SDK 호환용 `agents/`에도 생성한다.
 2. Agent의 공통 Instructions 참조를 Plugin의 `rules` 경로로 변환한다.
+   호환용 Agent는 `../com.github.copilot/rules/`를 참조해 같은 지침을 사용한다.
 3. Navigator Instructions를 `com.github.copilot/rules`로 복사한다.
 4. `.github/skills`의 네 Skill을 루트 `skills/`로 복사한다. 각 `SKILL.md`와
    `references/`의 원문 및 상대 경로를 유지한다.
@@ -66,7 +68,7 @@ node scripts/package-plugin.mjs ../wellactually-plugin
 6. manifest, Agent 수, Skill 진입점과 문서의 `./`, `../` 파일 링크를 검증한다.
 
 출력 경로는 개발 저장소의 내부나 상위 디렉터리가 될 수 없다. 출력의
-`com.github.copilot/`과 `skills/`는 생성 전용으로 매번 다시 만들며 오래된 파일도
+`com.github.copilot/`, `agents/`, `skills/`는 생성 전용으로 매번 다시 만들며 오래된 파일도
 제거한다. 이 폴더에 수동 파일을 두지 않는다. 출력 루트의 `.git`과 그 밖의
 비관리 파일은 보존하며 `plugin.json`과 `README.md`는 템플릿으로 덮어쓴다.
 
@@ -82,6 +84,7 @@ node scripts/package-plugin.mjs ../wellactually-plugin
 wellactually/
 ├─ plugin.json
 ├─ README.md
+├─ agents/                 # 구형 Copilot SDK 호환용 다섯 Agent
 ├─ skills/
 │  ├─ engineering-decisions/
 │  ├─ debugging-and-verification/
@@ -111,6 +114,27 @@ node --test scripts/package-plugin.test.mjs
 테스트는 임시 디렉터리에서 원문 보존, 호출 설정, 반복 실행, 오래된 산출물 정리,
 잘못된 경로와 링크를 검사한다. 실제 VS Code의 Skill 발견과 대화 중 자료 선택·적용
 품질은 별도 시나리오 검증이 필요하다.
+
+### Copilot 세션의 Agent 발견 검사
+
+VS Code의 `Local`과 `Copilot` 세션은 Agent 발견 경로가 다르다. 설치된 Copilot SDK
+`1.0.73`은 `com.github.copilot/agents`만 있는 패키지에서 Agent를 발견하지 못했지만,
+루트 `agents/`를 함께 생성하면 다섯 Agent를 반환했다. Local 로더는 Agent Plugins
+1.0 manifest의 네임스페이스 경로를 사용한다. 두 경로는 하나의 정본에서 생성한다.
+
+SDK가 설치된 환경에서는 `WELLACTUALLY_COPILOT_SDK`에 SDK 진입 파일을 지정해
+선택 실행형 발견 검사를 활성화한다. macOS의 기본 VS Code 설치 기준 명령은 다음과 같다.
+
+```bash
+ELECTRON_RUN_AS_NODE=1 \
+WELLACTUALLY_COPILOT_SDK='/Applications/Visual Studio Code.app/Contents/Resources/app/extensions/copilot/node_modules/@github/copilot/sdk/index.js' \
+'/Applications/Visual Studio Code.app/Contents/MacOS/Code' --test scripts/package-plugin.test.mjs
+```
+
+일반 Node로 실행한다면 SDK에 맞는 Node 22 이상을 사용한다. 검사는 임시 Workspace와
+설정 폴더에서 모델 호출이나 사용자 인증 없이 SDK의 Agent 목록만 조회한다. SDK
+경로를 지정하지 않은 기본 테스트에서는 이 검사를 건너뛴다. 목록 발견 성공은 실제
+UI 선택, 세션 도구 실행이나 Pair 행동 품질까지 보장하지 않으므로 설치 후 별도로 확인한다.
 
 ## Git 저장소에서 직접 설치
 
@@ -209,6 +233,8 @@ Wellactually를 설치할 수 있다.
 - 패키징 테스트를 통과하고 설치된 환경에서 관련 Skill 발견·선택을 확인했다.
 - 배포 저장소의 `plugin.json` 이름과 버전이 release와 일치한다.
 - 배포 저장소 Agent의 `../rules` 참조가 유효하다.
+- 호환용 `agents/`가 같은 정본에서 생성되며 공통 rule을 참조한다.
+- 대상 VS Code의 SDK 발견 검사와 `Local`·`Copilot` 선택기 확인을 구분해 수행했다.
 - Pair mode에는 편집, 명령 실행과 세션 메시지 전송 도구가 없다.
 - Driver에는 다른 Agent 세션을 조회하거나 제어하는 도구가 없다.
 - 기본 Chat View에서 Pair가 독립 Driver 세션을 생성할 수 있다.

@@ -125,6 +125,7 @@ VS Code 버전에 따라 메뉴와 표시 방식이 다를 수 있습니다.
 | 증상 | 확인할 내용 |
 | --- | --- |
 | Agent 선택기에 Wellactually가 없음 | 플러그인이 설치·활성화되어 있는지, `chat.plugins.enabled`가 켜져 있는지 확인합니다. 업데이트 후 새 Chat 세션에서도 확인합니다. |
+| `Local`에서는 보이지만 `Copilot`에서는 안 보임 | `0.2.0`에서 번들 Copilot SDK의 Plugin 경로 호환성 문제가 확인됐습니다. `0.2.1` 이상으로 업데이트하고 새 `Copilot` 세션에서 확인합니다. 계속 이전 목록이면 진행 중인 작업을 마친 뒤 `Developer: Reload Window`를 실행합니다. |
 | Driver 세션을 만들 수 없음 | 현재 세션이 필요한 Agent Host 세션 도구를 제공하는지 확인합니다. **Configure Tools**에서 세션 관리 도구와 조직 정책을 확인합니다. |
 | Driver가 구현하지 않고 기다림 | 생성된 세션에서 Agent를 **Wellactually Driver**로 직접 선택하고 구현 지시를 보냈는지 확인합니다. 생성 직후 대기는 정상입니다. |
 | Pair가 어떤 Driver인지 모름 | 기존 Driver 세션의 식별 정보를 알려 줍니다. Pair가 비슷한 이름의 세션을 임의로 고르도록 하지 않습니다. |

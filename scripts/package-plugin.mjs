@@ -56,6 +56,7 @@ const sourceInstruction = join(
 );
 const targetCopilotRoot = join(targetRoot, "com.github.copilot");
 const targetAgentRoot = join(targetCopilotRoot, "agents");
+const targetLegacyAgentRoot = join(targetRoot, "agents");
 const targetRuleRoot = join(targetCopilotRoot, "rules");
 const targetSkillRoot = join(targetRoot, "skills");
 const skillNames = readdirSync(sourceSkillRoot, { withFileTypes: true })
@@ -72,8 +73,10 @@ for (const skillName of skillNames) {
 
 mkdirSync(targetRoot, { recursive: true });
 rmSync(targetCopilotRoot, { recursive: true, force: true });
+rmSync(targetLegacyAgentRoot, { recursive: true, force: true });
 rmSync(targetSkillRoot, { recursive: true, force: true });
 mkdirSync(targetAgentRoot, { recursive: true });
+mkdirSync(targetLegacyAgentRoot, { recursive: true });
 mkdirSync(targetRuleRoot, { recursive: true });
 mkdirSync(targetSkillRoot, { recursive: true });
 
@@ -92,6 +95,10 @@ for (const fileName of agentFiles) {
     "../rules/wellactually-navigator.instructions.md",
   );
   writeFileSync(join(targetAgentRoot, fileName), packaged);
+  writeFileSync(join(targetLegacyAgentRoot, fileName), source.replaceAll(
+    "../instructions/wellactually-navigator.instructions.md",
+    "../com.github.copilot/rules/wellactually-navigator.instructions.md",
+  ));
 }
 
 cpSync(
@@ -117,7 +124,8 @@ if (packagedAgents.length !== 5) {
   failures.push(`expected 5 agents, found ${packagedAgents.length}`);
 }
 
-for (const filePath of [...markdownFiles(targetCopilotRoot), ...markdownFiles(targetSkillRoot)]) {
+for (const filePath of [...markdownFiles(targetCopilotRoot), ...markdownFiles(targetLegacyAgentRoot),
+  ...markdownFiles(targetSkillRoot)]) {
   const content = readFileSync(filePath, "utf8");
   for (const match of content.matchAll(/\]\((\.{1,2}\/[^)]+)\)/g)) {
     const destination = resolve(dirname(filePath), match[1].split("#")[0]);
