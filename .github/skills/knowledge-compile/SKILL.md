@@ -42,23 +42,26 @@ JSON review, transcript paste, or clarification interview.
    host workspace context if that tool is unavailable. Never use the Skill's or
    plugin's installation directory. If the workspace is ambiguous or unavailable,
    report that specific blocker and do not guess or write elsewhere.
-2. Use only native read/edit tools. Do not execute commands, edit source code,
-   run tests, commit, publish, or change settings to produce the article.
-   If edit access is unavailable or denied, report the blocker without claiming
-   a save succeeded or bypassing the permission through another tool.
-3. Choose `.wellactually/knowledge/YYYY-MM-DD-ascii-slug.md` under that workspace.
-   Use the current host date and a short descriptive lowercase slug. Inspect the
-   destination first; if it exists, choose `-2`, `-3`, and so on. Never overwrite
-   an existing note, including a user-edited one. Do not follow a known symlink
-   out of the task workspace. These are behavioral safeguards, not an atomic
-   no-overwrite operation or a path-enforced sandbox.
-4. Create one Markdown file, including its missing parent directories when the
-   native tool supports this. Begin with valid YAML frontmatter containing a
-   quoted `title`, quoted ISO `date`, and a short `tags` list. Use the user's
-   language, retaining established technical names. Do not generate HTML or JSON.
-5. Read the saved file back. Correct only defects introduced in this invocation's
-   new article; preserve concurrent human edits. Check factual attribution,
-   unsupported success claims, sensitive content, and Markdown readability.
-6. Return the saved file link and a brief coverage limitation if material. Do not
-   paste the whole article into chat or require approval before the user can read
-   it. Resume ordinary Pair boundaries after saving.
+2. Draft and check the article in this conversation before saving. Check factual
+   attribution, unsupported success claims, sensitive content, and readability.
+   Use the user's language, retaining established technical names. Do not generate
+   HTML. Do not execute commands, edit source code, run tests, commit, publish,
+   change settings, or start another model or agent to produce the article.
+3. Call only `wellactually-knowledge/saveKnowledge` to persist it. Supply `title`,
+   the finished `markdown` body without frontmatter, and a short lowercase ASCII
+   `tags` list. Supply the task workspace's exact file URI as `workspaceUri` when
+   known; it must match a root provided by the host. Never invent a path, approval
+   flag, or output filename. The Skill itself grants no tools.
+4. The tool requests human save confirmation with the destination, then creates
+   one new `.wellactually/knowledge/YYYY-MM-DD-ascii-slug-uuid.md`. It generates
+   YAML title/date/tags, uses a UTC date, and never overwrites a file. Honor that
+   confirmation; do not answer it for the user. No manual tool toggling is needed.
+5. On denial, cancellation, missing tool, unsupported roots/confirmation, or any
+   error, report the specific blocker. Do not retry automatically, claim success,
+   request general edit access, or fall back to commands, another tool, or Driver.
+   A failed I/O write may leave a partial new file; never repair or remove it with
+   general editing tools. Leave existing notes and user edits untouched.
+6. After a successful tool result, return the saved file link and any material
+   coverage limitation. Do not paste the whole article into chat. The user may
+   read and edit it afterward. Resume ordinary Pair boundaries; the dedicated
+   save capability does not authorize automatic compilation or implementation.

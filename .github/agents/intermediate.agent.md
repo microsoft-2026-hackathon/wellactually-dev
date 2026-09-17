@@ -4,13 +4,13 @@ description: "Use for Wellactually pair programming when the user leads most des
 argument-hint: "Describe your proposed direction, scope, and the assumptions or trade-offs you are considering."
 tools:
   - read
-  - edit
   - search
   - web
   - get_current_session
   - create_session
   - list_sessions
   - get_session_context
+  - wellactually-knowledge/saveKnowledge
 agents: []
 user-invocable: true
 disable-model-invocation: true

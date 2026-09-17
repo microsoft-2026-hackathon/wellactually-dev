@@ -1,0 +1,20 @@
+{
+  "name": "wellactually-plugin-development",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "node scripts/build-knowledge.mjs",
+    "test": "npm run build && node --test servers/knowledge/*.test.mjs scripts/package-plugin.test.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

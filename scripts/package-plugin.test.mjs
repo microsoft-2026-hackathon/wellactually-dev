@@ -14,7 +14,7 @@ function fixture(context) {
   const root = mkdtempSync(join(tmpdir(), "wellactually-package-"));
   context.after(() => rmSync(root, { recursive: true, force: true }));
   const source = join(root, "source");
-  for (const directory of [".github", "packaging", "scripts"]) {
+  for (const directory of [".github", "packaging", "scripts", "dist/knowledge"]) {
     cpSync(join(repositoryRoot, directory), join(source, directory), { recursive: true });
   }
   const output = join(root, "plugin");
@@ -37,11 +37,29 @@ test("packages five agents, Skill resources and relocated policy references", (c
   assert.equal(result.status, 0, result.stderr);
   const agents = readdirSync(join(output, "com.github.copilot/agents"));
   assert.equal(agents.length, 5);
+  for (const name of ["beginner", "easy", "intermediate", "advanced"]) {
+    for (const directory of [join(source, ".github/agents"), join(output, "com.github.copilot/agents")]) {
+      const agent = readFileSync(join(directory, `${name}.agent.md`), "utf8");
+      const tools = agent.match(/^tools:\r?\n((?:[ \t]+- [^\r\n]+\r?\n)+)/m);
+      assert.ok(tools, `${name} must have an explicit tool list`);
+      assert.deepEqual(tools[1].trim().split(/\r?\n/).map((line) => line.trim().slice(2)), [
+        "read", "search", "web", "get_current_session", "create_session", "list_sessions", "get_session_context", "wellactually-knowledge/saveKnowledge",
+      ], `${name} must not have default edit or execute tools`);
+    }
+  }
   for (const name of ["SKILL.md", "references/writing-guide.md"]) {
     assert.equal(readFileSync(join(output, skillPath, name), "utf8"), readFileSync(join(source, ".github", skillPath, name), "utf8"));
   }
   assert.match(readFileSync(join(output, rulePath), "utf8"), /\]\(\.\.\/\.\.\/skills\/knowledge-compile\/SKILL.md\)/);
   assert.equal(readFileSync(join(output, "com.github.copilot/agents/wellactually-driver.agent.md"), "utf8"), readFileSync(join(source, ".github/agents/wellactually-driver.agent.md"), "utf8"));
+  const mcp = JSON.parse(readFileSync(join(output, "mcp.json"), "utf8"));
+  assert.deepEqual(Object.keys(mcp.mcpServers), ["wellactually-knowledge"]);
+  assert.deepEqual(mcp.mcpServers["wellactually-knowledge"], {
+    type: "stdio", command: "node", args: ["${PLUGIN_ROOT}/servers/knowledge/server.cjs"],
+  });
+  for (const fileName of ["server.cjs", "THIRD-PARTY-NOTICES.txt"]) {
+    assert.equal(readFileSync(join(output, "servers/knowledge", fileName), "utf8"), readFileSync(join(source, "dist/knowledge", fileName), "utf8"));
+  }
 });
 
 test("repeat packaging removes stale owned resources but preserves unrelated skills", (context) => {
@@ -78,6 +96,15 @@ test("rejects source, nested and ancestor destinations without modifying source"
     assert.match(result.stderr, /must be separate/);
   }
   assert.deepEqual(snapshot(source), original);
+});
+
+test("missing runtime fails before changing output", (context) => {
+  const { source, output, run } = fixture(context);
+  assert.equal(run().status, 0);
+  const original = snapshot(output);
+  rmSync(join(source, "dist/knowledge/server.cjs"));
+  assert.notEqual(run().status, 0);
+  assert.deepEqual(snapshot(output), original);
 });
 
 test("rejects a symlink destination into source", { skip: process.platform === "win32" }, (context) => {

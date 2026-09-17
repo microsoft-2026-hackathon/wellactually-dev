@@ -53,6 +53,9 @@ const sourceSkillRoot = join(repositoryRoot, ".github", "skills", "knowledge-com
 const targetSkillRoot = join(targetRoot, "skills", "knowledge-compile");
 const targetInstruction = join(targetRuleRoot, "wellactually-navigator.instructions.md");
 const skillFiles = ["SKILL.md", "references/writing-guide.md"];
+const sourceRuntimeRoot = join(repositoryRoot, "dist", "knowledge");
+const targetRuntimeRoot = join(targetRoot, "servers", "knowledge");
+const runtimeFiles = ["server.cjs", "THIRD-PARTY-NOTICES.txt"];
 
 function validateReferences(filePath) {
   const content = readFileSync(filePath, "utf8");
@@ -65,6 +68,17 @@ function validateReferences(filePath) {
 
 for (const fileName of skillFiles) validateReferences(join(sourceSkillRoot, fileName));
 validateReferences(sourceInstruction);
+for (const fileName of runtimeFiles) {
+  if (!existsSync(join(sourceRuntimeRoot, fileName))) throw new Error("Run npm ci and npm run build before packaging saveKnowledge.");
+}
+const mcp = JSON.parse(readFileSync(join(repositoryRoot, "packaging", "mcp.json"), "utf8"));
+if (mcp.$schema !== "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json"
+    || mcp.mcpServers?.["wellactually-knowledge"]?.args?.[0] !== "${PLUGIN_ROOT}/servers/knowledge/server.cjs") {
+  throw new Error("Invalid bundled knowledge MCP configuration.");
+}
+if (!containsPath(canonicalTarget, canonicalPath(join(targetRoot, "servers")))) {
+  throw new Error("The target servers directory must stay inside the plugin output.");
+}
 if (!containsPath(canonicalTarget, canonicalPath(join(targetRoot, "skills")))) {
   throw new Error("The target skills directory must stay inside the plugin output.");
 }
@@ -96,6 +110,10 @@ writeFileSync(
 );
 rmSync(targetSkillRoot, { recursive: true, force: true });
 cpSync(sourceSkillRoot, targetSkillRoot, { recursive: true });
+rmSync(targetRuntimeRoot, { recursive: true, force: true });
+mkdirSync(targetRuntimeRoot, { recursive: true });
+for (const fileName of runtimeFiles) cpSync(join(sourceRuntimeRoot, fileName), join(targetRuntimeRoot, fileName));
+cpSync(join(repositoryRoot, "packaging", "mcp.json"), join(targetRoot, "mcp.json"));
 cpSync(join(repositoryRoot, "packaging", "plugin.json"), join(targetRoot, "plugin.json"));
 cpSync(join(repositoryRoot, "packaging", "README.md"), join(targetRoot, "README.md"));
 

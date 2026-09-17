@@ -11,6 +11,10 @@ on:
       - packaging/**
       - scripts/package-plugin.mjs
       - scripts/package-plugin.test.mjs
+      - scripts/build-knowledge.mjs
+      - servers/knowledge/**
+      - package.json
+      - package-lock.json
       - .github/workflows/sync-agent-plugin.yml
   workflow_dispatch:
 
@@ -53,8 +57,18 @@ jobs:
           git clone --branch main --single-branch \
             https://github.com/microsoft-2026-hackathon/wellactually.git plugin
 
-      - name: Test plugin packaging
-        run: node --test source/scripts/package-plugin.test.mjs
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: source/package-lock.json
+
+      - name: Install build dependencies
+        run: npm ci --prefix source
+
+      - name: Test runtime and plugin packaging
+        run: npm test --prefix source
 
       - name: Package plugin
         run: node source/scripts/package-plugin.mjs plugin
