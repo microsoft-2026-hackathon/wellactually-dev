@@ -7,8 +7,10 @@ on:
     paths:
       - .github/agents/**
       - .github/instructions/**
+      - .github/skills/**
       - packaging/**
       - scripts/package-plugin.mjs
+      - scripts/package-plugin.test.mjs
       - .github/workflows/sync-agent-plugin.yml
   workflow_dispatch:
 
@@ -50,6 +52,9 @@ jobs:
           chmod 600 "$HOME/.git-credentials"
           git clone --branch main --single-branch \
             https://github.com/microsoft-2026-hackathon/wellactually.git plugin
+
+      - name: Test plugin packaging
+        run: node --test source/scripts/package-plugin.test.mjs
 
       - name: Package plugin
         run: node source/scripts/package-plugin.mjs plugin

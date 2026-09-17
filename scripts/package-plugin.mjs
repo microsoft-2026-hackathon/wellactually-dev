@@ -6,10 +6,11 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -21,7 +22,19 @@ if (!targetArgument) {
 }
 
 const targetRoot = resolve(process.cwd(), targetArgument);
-if (targetRoot === repositoryRoot) {
+function canonicalPath(directory) {
+  if (existsSync(directory)) return realpathSync(directory);
+  return join(canonicalPath(dirname(directory)), relative(dirname(directory), directory));
+}
+
+function containsPath(parent, child) {
+  const difference = relative(parent, child);
+  return difference === "" || (difference !== ".." && !difference.startsWith(`..${sep}`) && !isAbsolute(difference));
+}
+
+const canonicalSource = canonicalPath(repositoryRoot);
+const canonicalTarget = canonicalPath(targetRoot);
+if (containsPath(canonicalSource, canonicalTarget) || containsPath(canonicalTarget, canonicalSource)) {
   console.error("The target directory must be separate from wellactually-dev.");
   process.exit(1);
 }
@@ -36,6 +49,25 @@ const sourceInstruction = join(
 const targetCopilotRoot = join(targetRoot, "com.github.copilot");
 const targetAgentRoot = join(targetCopilotRoot, "agents");
 const targetRuleRoot = join(targetCopilotRoot, "rules");
+const sourceSkillRoot = join(repositoryRoot, ".github", "skills", "knowledge-compile");
+const targetSkillRoot = join(targetRoot, "skills", "knowledge-compile");
+const targetInstruction = join(targetRuleRoot, "wellactually-navigator.instructions.md");
+const skillFiles = ["SKILL.md", "references/writing-guide.md"];
+
+function validateReferences(filePath) {
+  const content = readFileSync(filePath, "utf8");
+  for (const match of content.matchAll(/\]\((\.\.?\/[^)]+)\)/g)) {
+    if (!existsSync(resolve(dirname(filePath), match[1]))) {
+      throw new Error(`${filePath} has a broken reference: ${match[1]}`);
+    }
+  }
+}
+
+for (const fileName of skillFiles) validateReferences(join(sourceSkillRoot, fileName));
+validateReferences(sourceInstruction);
+if (!containsPath(canonicalTarget, canonicalPath(join(targetRoot, "skills")))) {
+  throw new Error("The target skills directory must stay inside the plugin output.");
+}
 
 mkdirSync(targetRoot, { recursive: true });
 rmSync(targetCopilotRoot, { recursive: true, force: true });
@@ -55,10 +87,15 @@ for (const fileName of agentFiles) {
   writeFileSync(join(targetAgentRoot, fileName), packaged);
 }
 
-cpSync(
-  sourceInstruction,
-  join(targetRuleRoot, "wellactually-navigator.instructions.md"),
+writeFileSync(
+  targetInstruction,
+  readFileSync(sourceInstruction, "utf8").replaceAll(
+    "../skills/knowledge-compile/SKILL.md",
+    "../../skills/knowledge-compile/SKILL.md",
+  ),
 );
+rmSync(targetSkillRoot, { recursive: true, force: true });
+cpSync(sourceSkillRoot, targetSkillRoot, { recursive: true });
 cpSync(join(repositoryRoot, "packaging", "plugin.json"), join(targetRoot, "plugin.json"));
 cpSync(join(repositoryRoot, "packaging", "README.md"), join(targetRoot, "README.md"));
 
@@ -79,17 +116,15 @@ if (packagedAgents.length !== 5) {
 }
 
 for (const fileName of packagedAgents) {
-  const content = readFileSync(join(targetAgentRoot, fileName), "utf8");
-  for (const match of content.matchAll(/\]\((\.\.\/[^)]+)\)/g)) {
-    if (!existsSync(resolve(targetAgentRoot, match[1]))) {
-      failures.push(`${fileName} has a broken reference: ${match[1]}`);
-    }
-  }
+  validateReferences(join(sourceAgentRoot, fileName));
+  validateReferences(join(targetAgentRoot, fileName));
 }
+validateReferences(targetInstruction);
+for (const fileName of skillFiles) validateReferences(join(targetSkillRoot, fileName));
 
 if (failures.length > 0) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
 
-console.log(`Packaged Wellactually ${manifest.version} with ${packagedAgents.length} agents to ${targetRoot}`);
+console.log(`Packaged Wellactually ${manifest.version} with ${packagedAgents.length} agents and knowledge-compile to ${targetRoot}`);
