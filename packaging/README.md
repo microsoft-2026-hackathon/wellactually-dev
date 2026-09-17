@@ -4,6 +4,8 @@ AI와 함께 개발하면서 자신의 공학적 판단을 만들어 가는 VS C
 플러그인입니다. **Pair와 생각을 나누고, Driver에게 직접 구현을 요청합니다.**
 
 이 문서는 플러그인에 함께 포함되는 한국어 사용 설명서입니다.
+설치 후 **Extensions → Agent Plugins - Installed → wellactually**를 선택하면
+플러그인 상세 화면에서 읽을 수 있습니다.
 설치 후에도 [온라인 사용 설명서](https://github.com/microsoft-2026-hackathon/wellactually#readme)에서
 다시 볼 수 있습니다.
 
