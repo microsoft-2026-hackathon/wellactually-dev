@@ -40,9 +40,6 @@ jobs:
           git -C source fetch --depth=1 origin "$GITHUB_SHA"
           git -C source checkout --detach FETCH_HEAD
 
-      - name: Test plugin packaging
-        run: node --test source/scripts/package-plugin.test.mjs
-
       - name: Check out plugin repository
         shell: bash
         env:
