@@ -1,0 +1,1168 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Wellactually Custom Agent와 Agent Host 기반 제품 설계 문서"
+    />
+    <title>Wellactually Custom Agent 제품 설계</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&amp;family=IBM+Plex+Sans+KR:wght@400;500;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --ink: #18262a;
+        --ink-soft: #4c5b5f;
+        --paper: #f7f9f7;
+        --surface: #ffffff;
+        --line: #ced8d5;
+        --teal: #176b68;
+        --teal-deep: #0f4c4a;
+        --coral: #c94f3d;
+        --gold: #b17a17;
+        --wash: #e8f1ef;
+        --code: #132d31;
+        --content: 760px;
+        --sidebar: 248px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background-color: var(--paper);
+        background-image: radial-gradient(#b9c9c5 0.65px, transparent 0.65px);
+        background-size: 18px 18px;
+        font-family: "IBM Plex Sans KR", "Apple SD Gothic Neo", sans-serif;
+        font-size: 17px;
+        line-height: 1.82;
+        word-break: keep-all;
+      }
+
+      a {
+        color: var(--teal-deep);
+        text-decoration-color: #87aaa5;
+        text-decoration-thickness: 1px;
+        text-underline-offset: 4px;
+      }
+
+      a:hover {
+        color: var(--coral);
+        text-decoration-color: currentColor;
+      }
+
+      .skip-link {
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        z-index: 20;
+        padding: 8px 12px;
+        color: #fff;
+        background: var(--ink);
+        transform: translateY(-160%);
+      }
+
+      .skip-link:focus {
+        transform: translateY(0);
+      }
+
+      .page {
+        display: grid;
+        grid-template-columns: var(--sidebar) minmax(0, var(--content));
+        gap: 72px;
+        width: min(1180px, calc(100% - 64px));
+        margin: 0 auto;
+        padding: 48px 0 96px;
+      }
+
+      .toc {
+        position: sticky;
+        top: 32px;
+        align-self: start;
+        max-height: calc(100vh - 64px);
+        padding: 20px 0;
+        overflow: auto;
+        border-top: 3px solid var(--coral);
+      }
+
+      .toc-title {
+        margin: 0 0 14px;
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .toc ol {
+        display: grid;
+        gap: 2px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        counter-reset: toc;
+      }
+
+      .toc li {
+        counter-increment: toc;
+      }
+
+      .toc a {
+        display: grid;
+        grid-template-columns: 28px 1fr;
+        gap: 4px;
+        padding: 5px 6px;
+        color: var(--ink-soft);
+        font-size: 13px;
+        line-height: 1.45;
+        text-decoration: none;
+      }
+
+      .toc a::before {
+        color: var(--coral);
+        content: counter(toc, decimal-leading-zero);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .toc a:hover {
+        color: var(--ink);
+        background: var(--wash);
+      }
+
+      main {
+        min-width: 0;
+      }
+
+      .hero {
+        position: relative;
+        margin-bottom: 68px;
+        padding: 56px 0 48px;
+        border-top: 8px solid var(--ink);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .hero::after {
+        position: absolute;
+        right: 0;
+        bottom: -4px;
+        width: 128px;
+        height: 7px;
+        content: "";
+        background: var(--coral);
+      }
+
+      .eyebrow {
+        margin: 0 0 18px;
+        color: var(--coral);
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        max-width: 700px;
+        margin: 0;
+        font-family: "Gowun Batang", "AppleMyungjo", serif;
+        font-size: clamp(44px, 7vw, 72px);
+        line-height: 1.08;
+        letter-spacing: 0;
+      }
+
+      .hero-subtitle {
+        max-width: 620px;
+        margin: 22px 0 0;
+        color: var(--ink-soft);
+        font-size: 22px;
+        line-height: 1.55;
+      }
+
+      .hero-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 20px;
+        margin: 32px 0 0;
+        color: var(--teal-deep);
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .hero-meta span::before {
+        margin-right: 7px;
+        color: var(--coral);
+        content: "/";
+      }
+
+      .mobile-toc {
+        display: none;
+        margin: -36px 0 48px;
+        border-block: 1px solid var(--line);
+      }
+
+      .mobile-toc summary {
+        padding: 13px 0;
+        color: var(--teal-deep);
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .mobile-toc ol {
+        columns: 2;
+        margin: 0;
+        padding: 4px 0 16px 22px;
+      }
+
+      .mobile-toc li {
+        margin-bottom: 5px;
+        break-inside: avoid;
+      }
+
+      .mobile-toc a {
+        font-size: 13px;
+        text-decoration: none;
+      }
+
+      section {
+        margin: 0 0 82px;
+        scroll-margin-top: 24px;
+      }
+
+      h2 {
+        display: grid;
+        grid-template-columns: 48px 1fr;
+        gap: 14px;
+        align-items: baseline;
+        margin: 0 0 28px;
+        padding-top: 18px;
+        border-top: 2px solid var(--ink);
+        font-size: 28px;
+        line-height: 1.35;
+        letter-spacing: 0;
+      }
+
+      h2 .section-number {
+        color: var(--coral);
+        font-size: 14px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      h3 {
+        margin: 40px 0 12px;
+        color: var(--teal-deep);
+        font-size: 20px;
+        line-height: 1.45;
+        letter-spacing: 0;
+      }
+
+      p {
+        margin: 0 0 19px;
+      }
+
+      strong {
+        font-weight: 700;
+      }
+
+      ul,
+      ol {
+        margin: 12px 0 24px;
+        padding-left: 23px;
+      }
+
+      li {
+        margin: 6px 0;
+        padding-left: 4px;
+      }
+
+      li::marker {
+        color: var(--coral);
+        font-weight: 700;
+      }
+
+      .lede {
+        padding-left: 20px;
+        border-left: 4px solid var(--teal);
+        font-size: 20px;
+        line-height: 1.68;
+      }
+
+      .statement {
+        margin: 32px 0;
+        padding: 22px 24px;
+        background: var(--wash);
+        border-left: 4px solid var(--gold);
+        font-size: 18px;
+        font-weight: 600;
+      }
+
+      code {
+        padding: 2px 6px;
+        color: var(--teal-deep);
+        background: #e4edeb;
+        border-radius: 3px;
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 0.88em;
+      }
+
+      pre {
+        margin: 28px 0;
+        padding: 24px;
+        overflow-x: auto;
+        color: #e4f1ee;
+        background: var(--code);
+        border-left: 5px solid var(--coral);
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 13px;
+        line-height: 1.7;
+        white-space: pre;
+      }
+
+      pre code {
+        padding: 0;
+        color: inherit;
+        background: transparent;
+        border-radius: 0;
+        font-size: inherit;
+      }
+
+      .architecture {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+        margin: 30px 0;
+      }
+
+      .chat-panel {
+        min-width: 0;
+        padding: 22px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-top: 5px solid var(--teal);
+      }
+
+      .chat-panel.driver {
+        border-top-color: var(--coral);
+      }
+
+      .chat-panel .label {
+        display: block;
+        margin-bottom: 10px;
+        color: var(--ink-soft);
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .chat-panel h3 {
+        margin: 0 0 14px;
+        color: var(--ink);
+        font-size: 22px;
+      }
+
+      .chat-panel ul {
+        margin-bottom: 0;
+        font-size: 15px;
+        line-height: 1.7;
+      }
+
+      .access-flow {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        gap: 14px;
+        align-items: center;
+        margin: 28px 0;
+        padding: 18px 22px;
+        background: var(--ink);
+        color: #fff;
+      }
+
+      .access-flow strong {
+        text-align: center;
+      }
+
+      .access-flow .direction {
+        color: #9ed0c9;
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 13px;
+        text-align: center;
+      }
+
+      .workflow {
+        display: grid;
+        gap: 0;
+        margin: 30px 0;
+        padding: 0;
+        list-style: none;
+        counter-reset: workflow;
+        border-top: 1px solid var(--line);
+      }
+
+      .workflow li {
+        display: grid;
+        grid-template-columns: 42px 1fr;
+        gap: 16px;
+        margin: 0;
+        padding: 18px 0;
+        counter-increment: workflow;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .workflow li::before {
+        color: var(--coral);
+        content: counter(workflow, decimal-leading-zero);
+        font-size: 13px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .workflow pre {
+        grid-column: 2;
+        margin: 12px 0 4px;
+      }
+
+      .agent-grid,
+      .tool-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+        margin: 28px 0;
+      }
+
+      .agent-profile,
+      .tool-profile {
+        padding: 22px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+      }
+
+      .agent-profile h3,
+      .tool-profile h3 {
+        margin-top: 0;
+        color: var(--ink);
+      }
+
+      .agent-profile ul,
+      .tool-profile ul {
+        margin-bottom: 0;
+        font-size: 15px;
+        line-height: 1.7;
+      }
+
+      .mode-strip {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        margin: 24px 0;
+        border: 1px solid var(--line);
+      }
+
+      .mode-strip span {
+        padding: 14px 8px;
+        background: var(--surface);
+        border-right: 1px solid var(--line);
+        font-size: 13px;
+        font-weight: 700;
+        text-align: center;
+      }
+
+      .mode-strip span:last-child {
+        border-right: 0;
+      }
+
+      .mode-strip span:nth-child(even) {
+        color: var(--teal-deep);
+        background: var(--wash);
+      }
+
+      .decision-list {
+        display: grid;
+        gap: 0;
+        margin: 24px 0;
+        padding: 0;
+        list-style: none;
+        border-block: 1px solid var(--line);
+      }
+
+      .decision-list li {
+        display: grid;
+        grid-template-columns: 150px 1fr;
+        gap: 18px;
+        margin: 0;
+        padding: 16px 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .decision-list li:last-child {
+        border-bottom: 0;
+      }
+
+      .decision-list strong {
+        color: var(--teal-deep);
+      }
+
+      .constraint-list {
+        margin-top: 28px;
+        padding: 20px 24px 20px 44px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-top: 5px solid var(--coral);
+      }
+
+      .summary-list {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1px;
+        margin: 28px 0;
+        padding: 1px;
+        list-style: none;
+        background: var(--line);
+      }
+
+      .summary-list li {
+        min-height: 82px;
+        margin: 0;
+        padding: 17px 18px;
+        background: var(--surface);
+        font-size: 15px;
+        font-weight: 600;
+      }
+
+      .document-footer {
+        margin-top: 96px;
+        padding-top: 24px;
+        color: var(--ink-soft);
+        border-top: 1px solid var(--line);
+        font-size: 13px;
+      }
+
+      @media (max-width: 1000px) {
+        .page {
+          grid-template-columns: minmax(0, var(--content));
+          justify-content: center;
+          width: min(100% - 48px, var(--content));
+        }
+
+        .toc {
+          display: none;
+        }
+
+        .mobile-toc {
+          display: block;
+        }
+      }
+
+      @media (max-width: 640px) {
+        body {
+          font-size: 16px;
+          line-height: 1.76;
+        }
+
+        .page {
+          width: calc(100% - 36px);
+          padding-top: 22px;
+        }
+
+        .hero {
+          margin-bottom: 56px;
+          padding: 40px 0 38px;
+        }
+
+        h1 {
+          font-size: 41px;
+        }
+
+        .hero-subtitle {
+          font-size: 19px;
+        }
+
+        .mobile-toc ol {
+          columns: 1;
+        }
+
+        section {
+          margin-bottom: 64px;
+        }
+
+        h2 {
+          grid-template-columns: 38px 1fr;
+          gap: 8px;
+          font-size: 24px;
+        }
+
+        .lede {
+          font-size: 18px;
+        }
+
+        .architecture,
+        .agent-grid,
+        .tool-grid,
+        .summary-list {
+          grid-template-columns: 1fr;
+        }
+
+        .access-flow {
+          grid-template-columns: 1fr;
+        }
+
+        .mode-strip {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .mode-strip span:nth-child(2) {
+          border-right: 0;
+        }
+
+        .mode-strip span:nth-child(-n + 2) {
+          border-bottom: 1px solid var(--line);
+        }
+
+        .decision-list li {
+          grid-template-columns: 1fr;
+          gap: 5px;
+        }
+
+        pre {
+          margin-inline: -18px;
+          padding: 20px 18px;
+          font-size: 11px;
+        }
+
+        .workflow pre {
+          grid-column: 1 / -1;
+          margin-inline: -18px;
+        }
+      }
+
+      @media print {
+        body {
+          color: #000;
+          background: #fff;
+          font-size: 11pt;
+        }
+
+        .page {
+          display: block;
+          width: auto;
+          padding: 0;
+        }
+
+        .toc,
+        .mobile-toc,
+        .skip-link {
+          display: none;
+        }
+
+        .hero {
+          break-after: page;
+        }
+
+        section {
+          margin-bottom: 36px;
+        }
+
+        h2,
+        h3 {
+          break-after: avoid;
+        }
+
+        .chat-panel,
+        .agent-profile,
+        .tool-profile,
+        pre,
+        .constraint-list {
+          break-inside: avoid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <a class="skip-link" href="#content">본문으로 이동</a>
+
+    <div class="page">
+      <nav class="toc" aria-label="문서 목차">
+        <p class="toc-title">Contents</p>
+        <ol>
+          <li><a href="#purpose">목적</a></li>
+          <li><a href="#agent-host">Agent Host 구성</a></li>
+          <li><a href="#driver-flow">Driver Chat 생성과 사용 흐름</a></li>
+          <li><a href="#agent-body">Custom Agent 본문</a></li>
+          <li><a href="#frontmatter">Frontmatter 설정</a></li>
+          <li><a href="#instructions">Instructions</a></li>
+          <li><a href="#tools">Tools</a></li>
+          <li><a href="#skills">Skills</a></li>
+          <li><a href="#mcp">MCP</a></li>
+          <li><a href="#prompts-hooks">Prompts와 Hooks</a></li>
+          <li><a href="#constraints">기술적 제약과 검증 항목</a></li>
+          <li><a href="#summary">MVP 구성 요약</a></li>
+        </ol>
+      </nav>
+
+      <main id="content">
+        <header class="hero">
+          <p class="eyebrow">Product Design / Agent Customization</p>
+          <h1>Wellactually<br />Custom Agent 제품 설계</h1>
+          <p class="hero-subtitle">
+            VS Code Custom Agent와 Agent Host를 사용한 Pair·Driver 제품 구조
+          </p>
+          <div class="hero-meta" aria-label="핵심 설계 원칙">
+            <span>분리된 대화</span>
+            <span>공유 Workspace</span>
+            <span>사용자 주도 위임</span>
+          </div>
+        </header>
+
+        <details class="mobile-toc">
+          <summary>목차 열기</summary>
+          <ol>
+            <li><a href="#purpose">목적</a></li>
+            <li><a href="#agent-host">Agent Host 구성</a></li>
+            <li><a href="#driver-flow">Driver Chat 생성과 사용 흐름</a></li>
+            <li><a href="#agent-body">Custom Agent 본문</a></li>
+            <li><a href="#frontmatter">Frontmatter 설정</a></li>
+            <li><a href="#instructions">Instructions</a></li>
+            <li><a href="#tools">Tools</a></li>
+            <li><a href="#skills">Skills</a></li>
+            <li><a href="#mcp">MCP</a></li>
+            <li><a href="#prompts-hooks">Prompts와 Hooks</a></li>
+            <li><a href="#constraints">기술적 제약과 검증 항목</a></li>
+            <li><a href="#summary">MVP 구성 요약</a></li>
+          </ol>
+        </details>
+
+        <article>
+          <section id="purpose">
+            <h2><span class="section-number">01</span><span>목적</span></h2>
+            <p class="lede">
+              Wellactually의 첫 제품 형태는 별도 Chat UI가 아니라 VS Code의
+              Custom Agent와 Agent Host를 사용한다.
+            </p>
+            <p>
+              제품은 Pair와 Driver의 대화를 분리하면서도, Pair가 Driver의 작업
+              과정과 사용자가 전달한 구현 지시를 읽고 다음 논의를 이어 갈 수
+              있게 한다.
+            </p>
+          </section>
+
+          <section id="agent-host">
+            <h2>
+              <span class="section-number">02</span><span>Agent Host 구성</span>
+            </h2>
+            <p>하나의 Agent Host 세션 안에 Pair Chat과 Driver Chat을 둔다.</p>
+
+            <div class="architecture" aria-label="Agent Host Chat 구성">
+              <div class="chat-panel">
+                <span class="label">Agent Host Session / Chat A</span>
+                <h3>Pair Chat</h3>
+                <ul>
+                  <li>사용자가 페어링 mode를 선택한다.</li>
+                  <li>문제, 방향과 Scope을 함께 논의한다.</li>
+                  <li>Driver Chat과 Workspace 상태를 읽는다.</li>
+                </ul>
+              </div>
+              <div class="chat-panel driver">
+                <span class="label">Agent Host Session / Chat B</span>
+                <h3>Driver Chat</h3>
+                <ul>
+                  <li>Pair가 최초 한 번 생성한다.</li>
+                  <li>사용자가 Wellactually Driver를 선택한다.</li>
+                  <li>사용자가 직접 구현 지시를 입력한다.</li>
+                </ul>
+              </div>
+            </div>
+
+            <p>
+              두 Chat은 서로의 대화 기록을 자동으로 상속하지 않는다. 대신 같은
+              Agent Host 세션에 속하므로 Workspace와 worktree를 공유한다.
+              Driver가 변경한 코드는 Pair가 Workspace에서 확인할 수 있고, Pair는
+              Agent Host의 세션 관리 도구를 사용해 Driver Chat의 최근 대화
+              맥락도 읽을 수 있다.
+            </p>
+
+            <div class="access-flow" aria-label="Chat 간 데이터 접근 방향">
+              <strong>Pair Chat</strong>
+              <span class="direction">읽기 →<br />← 접근 불가</span>
+              <strong>Driver Chat</strong>
+            </div>
+
+            <p class="statement">
+              Pair는 Driver Chat에 메시지를 보내거나 작업을 위임하지 않는다.
+              Driver에게 어떤 작업을 맡길지 결정하고 실제 구현 지시를 작성하는
+              주체는 사용자다.
+            </p>
+          </section>
+
+          <section id="driver-flow">
+            <h2>
+              <span class="section-number">03</span
+              ><span>Driver Chat 생성과 사용 흐름</span>
+            </h2>
+            <ol class="workflow">
+              <li>
+                <span
+                  >사용자가 Pair mode를 선택하고 Pair Chat에서 문제, 방향과
+                  Scope을 논의한다.</span
+                >
+              </li>
+              <li>
+                <span
+                  >Pair는 Agent Host의 <code>create_session</code> 도구를
+                  <code>currentSession</code> 관계로 호출해 같은 Agent Host 세션
+                  안에 Driver용 Chat을 만든다.</span
+                >
+              </li>
+              <li>
+                <span
+                  ><code>create_session</code>에는 초기 프롬프트가 필수이므로,
+                  실제 작업을 지시하지 않는 짧은 안내를 넣는다.</span
+                >
+                <pre><code>Wellactually Driver 작업을 위한 Chat입니다.
+사용자가 직접 구현 지시를 전달할 때까지 기다리세요.</code></pre>
+              </li>
+              <li>
+                <span
+                  >생성 결과에 포함된 <code>Open Session</code> 링크를 통해
+                  사용자가 Driver Chat을 연다.</span
+                >
+              </li>
+              <li>
+                <span
+                  ><code>create_session</code>은 대상 Custom Agent를 지정할 수
+                  없으므로 사용자가 <strong>Wellactually Driver</strong>를 직접
+                  선택한다.</span
+                >
+              </li>
+              <li>
+                <span
+                  >사용자는 Pair와 논의한 판단을 자신의 말로 구현 지시에 담아
+                  Driver에게 전달한다.</span
+                >
+              </li>
+              <li>
+                <span>Driver는 국소적인 설계, 구현과 검증을 수행한다.</span>
+              </li>
+              <li>
+                <span>사용자는 기존 Pair Chat으로 돌아가 논의를 계속한다.</span>
+              </li>
+              <li>
+                <span
+                  >Pair는 생성 시 받은 Driver Chat 링크로
+                  <code>get_session_context</code>를 호출해 사용자 지시, Driver
+                  응답과 도구 사용 맥락을 읽고, Workspace의 실제 변경도
+                  확인한다.</span
+                >
+              </li>
+            </ol>
+            <p>
+              이 흐름은 필요한 만큼 반복할 수 있다. Pair가 Driver Chat을 다시
+              만들거나 기존 Driver Chat에 후속 메시지를 보내는 방식으로 반복하지
+              않는다. 사용자가 같은 Driver Chat에서 다음 구현 지시를 내리고
+              Pair는 그 결과를 읽는다.
+            </p>
+          </section>
+
+          <section id="agent-body">
+            <h2>
+              <span class="section-number">04</span
+              ><span>Custom Agent 본문</span>
+            </h2>
+            <div class="agent-grid">
+              <div class="agent-profile">
+                <h3>Pair mode</h3>
+                <p>네 mode는 하나의 Navigator 정체성과 역할 경계를 공유한다.</p>
+                <ul>
+                  <li>개입 빈도와 개입 기준</li>
+                  <li>우선하는 Navigator 상호작용 방식</li>
+                  <li>질문, 반례와 지식 제공의 구체성</li>
+                  <li>사용자가 스스로 사고하도록 남겨 두는 범위</li>
+                </ul>
+              </div>
+              <div class="agent-profile">
+                <h3>Wellactually Driver</h3>
+                <ul>
+                  <li>사용자가 직접 전달한 구현 지시를 수행한다.</li>
+                  <li>국소적인 설계, 코드 변경과 검증을 담당한다.</li>
+                  <li>Pair Chat을 읽거나 Pair를 호출하지 않는다.</li>
+                  <li>열린 제품 판단을 임의로 확정하지 않는다.</li>
+                  <li>중요한 모호함은 사용자에게 돌려준다.</li>
+                </ul>
+              </div>
+            </div>
+            <div class="mode-strip" aria-label="네 가지 Pair mode">
+              <span>Beginner mode</span>
+              <span>Easy mode</span>
+              <span>Intermediate mode</span>
+              <span>Advanced mode</span>
+            </div>
+          </section>
+
+          <section id="frontmatter">
+            <h2>
+              <span class="section-number">05</span
+              ><span>Frontmatter 설정</span>
+            </h2>
+            <p>
+              Pair mode는 사용자가 직접 선택할 수 있지만 다른 Agent가 자동으로
+              호출할 수는 없게 한다. Subagent도 사용하지 않는다.
+            </p>
+            <h3>Pair mode</h3>
+            <pre><code>---
+name: Easy mode
+description: "사용자와 함께 설계와 구현 범위를 구체화하는 Wellactually Navigator"
+argument-hint: "현재 작업의 문제, 방향 또는 고민을 설명하세요."
+tools:
+  - read
+  - search
+  - web
+  - create_session
+  - list_sessions
+  - get_session_context
+agents: []
+user-invocable: true
+disable-model-invocation: true
+---</code></pre>
+            <h3>Wellactually Driver</h3>
+            <pre><code>---
+name: Wellactually Driver
+description: "사용자가 정한 범위 안에서 국소 설계, 구현과 검증을 수행하는 Driver"
+argument-hint: "구현할 목표, Scope, 유지할 조건과 확인 기준을 지시하세요."
+tools:
+  - read
+  - search
+  - edit
+  - execute
+agents: []
+user-invocable: true
+disable-model-invocation: true
+---</code></pre>
+            <p>
+              Agent Host 내장 도구의 실제 식별자와 Custom Agent에서 선택 가능한
+              이름은 사용 중인 VS Code 버전의
+              <strong>Configure Tools</strong>에서 확인한다. 위 이름은 제품
+              설계상 필요한 기능을 나타낸다.
+            </p>
+          </section>
+
+          <section id="instructions">
+            <h2>
+              <span class="section-number">06</span><span>Instructions</span>
+            </h2>
+            <p>
+              네 Pair mode가 공유하는 Navigator 정책은 별도 Instructions 파일로
+              관리하고 각 Agent 본문에서 참조한다.
+            </p>
+            <pre><code>.github/instructions/wellactually-navigator.instructions.md</code></pre>
+            <ul>
+              <li>사용자, Pair와 Driver의 역할 및 소유권</li>
+              <li>여섯 가지 Navigator 상호작용 방식</li>
+              <li>사용자가 판단과 Driver 지시를 직접 소유한다는 원칙</li>
+              <li>
+                Pair가 완성된 설계나 구현 지시를 대신 작성하지 않는다는 경계
+              </li>
+              <li>Driver 결과를 채점하거나 승인하지 않는다는 경계</li>
+              <li>Driver Chat을 읽는 목적, 시점과 범위</li>
+              <li>
+                Driver Chat에 메시지를 보내거나 작업을 위임하지 않는다는 제한
+              </li>
+              <li>수평적인 동료 관계와 mode에 관계없이 유지할 말투</li>
+            </ul>
+            <p class="statement">
+              Pair 전용 정책은 <code>AGENTS.md</code> 같은 전역 Instructions에
+              넣지 않는다. 전역 적용 시 Driver에도 Navigator 정책이 섞일 수 있기
+              때문이다.
+            </p>
+          </section>
+
+          <section id="tools">
+            <h2><span class="section-number">07</span><span>Tools</span></h2>
+            <div class="tool-grid">
+              <div class="tool-profile">
+                <h3>Pair 도구</h3>
+                <ul>
+                  <li><code>read</code>: 구현 결과와 프로젝트 문서</li>
+                  <li><code>search</code>: 관련 코드, 계약과 제약</li>
+                  <li><code>web</code>: 공식 문서와 공학 지식</li>
+                  <li><code>create_session</code>: Driver Chat 최초 생성</li>
+                  <li><code>list_sessions</code>: 세션 상태와 메타데이터</li>
+                  <li><code>get_session_context</code>: Driver의 최근 대화</li>
+                </ul>
+              </div>
+              <div class="tool-profile">
+                <h3>Driver 도구</h3>
+                <ul>
+                  <li>Workspace 읽기와 검색</li>
+                  <li>코드 편집</li>
+                  <li>명령 실행</li>
+                  <li>구현 결과 검증</li>
+                  <li>Agent Host 세션 조회·제어 도구는 제외</li>
+                </ul>
+              </div>
+            </div>
+            <p>
+              <code>get_session_context</code>는 사용자 프롬프트, Driver 응답과
+              도구 호출을 제한된 최근 대화 범위에서 반환한다. Pair는 사용자의
+              프롬프트를 별도로 채점하지 않는다. Pair와 논의한 의도와 제약이
+              실제 위임에 어떻게 반영되었는지, 누락이나 Scope 차이가 구현 결과에
+              영향을 주었는지를 이해하는 보조 맥락으로 사용한다.
+            </p>
+            <p>
+              Pair에는 코드 편집, 명령 실행, 다른 Agent 호출, 다른 Chat으로
+              메시지를 보내는 도구를 제공하지 않는다. Driver에는 다른 Agent Host
+              세션이나 Chat을 조회하고 읽고 제어하는 도구를 제공하지 않는다.
+            </p>
+          </section>
+
+          <section id="skills">
+            <h2><span class="section-number">08</span><span>Skills</span></h2>
+            <p>
+              MVP에서 제공할 주요 Skill은 <code>knowledge-compile</code>이다.
+              사용자가 <code>/knowledge-compile</code>을 실행하거나 세션 지식
+              정리를 명시적으로 요청했을 때만 사용한다.
+            </p>
+            <pre><code>---
+name: knowledge-compile
+description: "완료한 페어링 경험에서 사용자가 형성한 지식과 판단을 정리할 때 사용"
+user-invocable: true
+disable-model-invocation: true
+---</code></pre>
+            <p>
+              <code>disable-model-invocation: true</code>로 설정해 Pair가 임의로
+              실행하지 못하게 한다.
+            </p>
+            <p>
+              추후에는 설계 Trade-off 탐색, 디버깅 가설 수립, 마이그레이션 위험
+              탐색처럼 반복 가능한 공학적 절차를 Skill로 추가할 수 있다. 이러한
+              Skill은 Pair의 기본 성격을 바꾸지 않고 필요할 때만 지식과 절차를
+              제공해야 한다.
+            </p>
+          </section>
+
+          <section id="mcp">
+            <h2><span class="section-number">09</span><span>MCP</span></h2>
+            <p class="lede">
+              MVP에는 MCP가 필요하지 않다. Driver Chat 접근에는 Agent Host 내장
+              세션 관리 도구를 사용한다.
+            </p>
+            <p>
+              GitHub 또는 Azure DevOps 이슈, 사내 Wiki, 운영 로그, API 명세나
+              데이터베이스 스키마처럼 Workspace 밖의 근거가 실제 Navigator
+              판단에 필요해질 때 MCP를 검토한다. 도입 시 Pair에는 필요한 읽기
+              전용 MCP 도구만 개별 허용하고, 서버의 모든 도구를 일괄 허용하지
+              않는다.
+            </p>
+          </section>
+
+          <section id="prompts-hooks">
+            <h2>
+              <span class="section-number">10</span><span>Prompts와 Hooks</span>
+            </h2>
+            <ul class="decision-list">
+              <li>
+                <strong>Prompt 파일</strong>
+                <span
+                  >MVP에 두지 않는다. 사용자가 Driver 작업 프롬프트를 직접
+                  작성하는 과정이 제품 경험의 일부다.</span
+                >
+              </li>
+              <li>
+                <strong>초기 안내</strong>
+                <span
+                  >별도 Prompt 파일이 아니라 <code>create_session</code>의 필수
+                  <code>prompt</code> 인자로 전달한다.</span
+                >
+              </li>
+              <li>
+                <strong>Hooks</strong>
+                <span
+                  >처음부터 도입하지 않는다. 명시적인 도구 허용 목록과
+                  Instructions로 시작한다.</span
+                >
+              </li>
+            </ul>
+            <p>
+              다음 동작이 실제로 반복될 때만 <code>PreToolUse</code> Hook으로
+              강제한다.
+            </p>
+            <ul>
+              <li>Pair가 Driver Chat을 둘 이상 생성한다.</li>
+              <li>허용하지 않은 세션 제어 동작을 시도한다.</li>
+              <li>mode의 역할 경계를 벗어난 도구를 호출한다.</li>
+            </ul>
+            <p>
+              Hooks를 추가할 경우 작은 감사 가능한 스크립트로 유지하고, Agent
+              Host의 Preview 기능 및 VS Code 버전 변화에 따른 동작 차이를 함께
+              검증한다.
+            </p>
+          </section>
+
+          <section id="constraints">
+            <h2>
+              <span class="section-number">11</span
+              ><span>기술적 제약과 검증 항목</span>
+            </h2>
+            <ul class="constraint-list">
+              <li>
+                <code>create_session</code>은 <code>prompt</code>와
+                <code>title</code>을 필수로 받고 생성 직후 첫 요청을 실행한다.
+                빈 Driver Chat만 만드는 동작은 현재 지원되지 않는다.
+              </li>
+              <li>
+                <code>create_session</code>은 모델을 지정할 수 있지만 Custom
+                Agent를 지정할 수 없다. 따라서 사용자가 생성된 Chat에서
+                Wellactually Driver를 직접 선택해야 한다.
+              </li>
+              <li>
+                <code>get_session_context</code>는 기본적으로 최근 10개 turn을
+                반환하고 최대 50개까지 요청할 수 있다. 전체 원본 대화가 항상
+                제공되는 계약은 아니다.
+              </li>
+              <li>
+                Pair가 특정 Driver Chat을 다시 읽으려면 생성 결과의 Chat별
+                <code>openLink</code>를 유지해야 한다. Context compaction이나
+                세션 복원 뒤에도 이 연결을 안정적으로 재사용할 수 있는지 실제
+                환경에서 검증해야 한다.
+              </li>
+              <li>
+                Agent Host와 세션 관리 기능은 개발 중인 Preview 표면이다. 지원
+                VS Code 버전과 필요한 설정을 제품 요구사항으로 명시해야 한다.
+              </li>
+            </ul>
+          </section>
+
+          <section id="summary">
+            <h2>
+              <span class="section-number">12</span><span>MVP 구성 요약</span>
+            </h2>
+            <ul class="summary-list">
+              <li>네 개의 Pair mode Custom Agent</li>
+              <li>하나의 Wellactually Driver Custom Agent</li>
+              <li>하나의 공통 Navigator Instructions</li>
+              <li>Pair의 읽기 전용 Workspace 및 Agent Host 세션 도구</li>
+              <li>Driver의 구현 및 검증 도구</li>
+              <li>
+                사용자가 명시적으로 실행하는
+                <code>knowledge-compile</code> Skill
+              </li>
+              <li>
+                같은 Agent Host 세션 안에서 분리된 Pair Chat과 Driver Chat
+              </li>
+              <li>사용자가 직접 수행하는 Driver 선택과 구현 지시</li>
+            </ul>
+          </section>
+        </article>
+
+        <footer class="document-footer">
+          Wellactually Custom Agent Product Design · Markdown 원문과 함께
+          관리되는 HTML 문서
+        </footer>
+      </main>
+    </div>
+  </body>
+</html>
