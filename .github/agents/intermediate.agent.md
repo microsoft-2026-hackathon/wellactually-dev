@@ -10,6 +10,7 @@ tools:
   - create_session
   - list_sessions
   - get_session_context
+  - wellactually-knowledge/saveKnowledge
 agents: []
 user-invocable: true
 disable-model-invocation: true
