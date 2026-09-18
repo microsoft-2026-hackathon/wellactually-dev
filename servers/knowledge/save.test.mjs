@@ -33,9 +33,58 @@ test("planning is read-only; creation writes frontmatter and never overwrites", 
   assert.equal(existsSync(join(workspace, ".wellactually")), false);
   const saved = createArticle(plan);
   assert.equal(readFileSync(saved.path, "utf8"), plan.content);
+  assert.equal(readFileSync(saved.htmlPath, "utf8"), plan.htmlContent);
   assert.throws(() => createArticle(plan), { code: "EEXIST" });
   assert.equal(readFileSync(saved.path, "utf8"), plan.content);
+  assert.equal(readFileSync(saved.htmlPath, "utf8"), plan.htmlContent);
   assert.notEqual(planArticle(article, roots).path, saved.path);
+});
+
+test("the HTML copy shares the Markdown name, stays in the knowledge directory and renders the article", (context) => {
+  const { workspace, roots } = fixture(context);
+  const plan = planArticle(article, roots);
+  assert.equal(plan.htmlPath, plan.path.replace(/\.md$/, ".html"));
+  assert.ok(plan.htmlPath.startsWith(join(workspace, ".wellactually", "knowledge") + sep));
+  const saved = createArticle(plan);
+  const html = readFileSync(saved.htmlPath, "utf8");
+  assert.match(html, /^<!doctype html>/);
+  assert.match(html, /<title>Why polling\?<\/title>/);
+  assert.match(html, /<h2>Polling<\/h2>/);
+  assert.match(html, /<p>Implementation is not yet tested\.<\/p>/);
+  assert.match(html, /class="tag">trade-offs</);
+  assert.equal(saved.htmlUri, pathToFileURL(saved.htmlPath).href);
+});
+
+test("a failed HTML write leaves the Markdown file and never overwrites either file", (context) => {
+  const { roots } = fixture(context);
+  const plan = planArticle(article, roots);
+  const saved = createArticle(plan);
+  const markdown = readFileSync(saved.path, "utf8");
+  const second = planArticle(article, roots);
+  second.path = second.path.replace(/\.md$/, "-other.md");
+  second.htmlPath = saved.htmlPath;
+  assert.throws(() => createArticle(second), { code: "EEXIST" });
+  assert.equal(readFileSync(second.path, "utf8"), second.content);
+  assert.equal(readFileSync(saved.path, "utf8"), markdown);
+  assert.equal(readFileSync(saved.htmlPath, "utf8"), plan.htmlContent);
+});
+
+test("the HTML copy escapes untrusted article content and rejects unsafe link targets", (context) => {
+  const { roots } = fixture(context);
+  const hostile = {
+    title: "<script>alert(1)</script>",
+    markdown: "Body <img src=x onerror=alert(1)> & more\n\n[click](javascript:alert(1))\n\n`<b>code</b>`",
+    tags: ["xss"],
+  };
+  const { htmlContent } = planArticle(hostile, roots);
+  const body = htmlContent.split("</style>")[1];
+  const tags = new Set([...body.matchAll(/<\/?([a-z0-9]+)/g)].map((match) => match[1]));
+  assert.deepEqual([...tags].filter((tag) => ["script", "img", "iframe", "a", "style"].includes(tag)), []);
+  assert.match(body, /Body &lt;img src=x onerror=alert\(1\)&gt;/);
+  assert.match(htmlContent, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
+  assert.match(htmlContent, /&amp; more/);
+  assert.match(htmlContent, /\[click\]\(javascript:alert\(1\)\)/);
+  assert.match(htmlContent, /<code>&lt;b&gt;code&lt;\/b&gt;<\/code>/);
 });
 
 test("rejects missing, ambiguous and arbitrary workspace roots", (context) => {

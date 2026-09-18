@@ -16,7 +16,7 @@ function supportsFormElicitation(capabilities) {
 
 server.registerTool("saveKnowledge", {
   title: "Save Knowledge Article",
-  description: "Save an explicitly requested engineering article as NEW Markdown under the current session workspace's .wellactually/knowledge directory. Supply the exact workspace file URI from get_current_session. Host roots are enforced when available, and MCP form confirmation is requested when supported. Never edits or overwrites files. No shell, model calls, or network access. Supply the finished article body without frontmatter. Do not retry after denial.",
+  description: "Save an explicitly requested engineering article as a NEW Markdown file plus a matching read-only HTML copy under the current session workspace's .wellactually/knowledge directory. The HTML is rendered deterministically by this server from the supplied Markdown; never author HTML yourself. Supply the exact workspace file URI from get_current_session. Host roots are enforced when available, and MCP form confirmation is requested when supported. Never edits or overwrites files. No shell, model calls, or network access. Supply the finished article body without frontmatter. Do not retry after denial.",
   inputSchema: z.object({
     title: z.string().min(1).max(200),
     markdown: z.string().min(1).max(200_000),
@@ -38,7 +38,7 @@ server.registerTool("saveKnowledge", {
     if (supportsFormElicitation(capabilities)) {
       const confirmation = await server.server.elicitInput({
         mode: "form",
-        message: `Create one new Knowledge Markdown file?\n\nTitle: ${input.title}\nDestination: ${plan.path}\nSize: ${Buffer.byteLength(plan.content, "utf8")} bytes\n\nExisting files will not be changed.`,
+        message: `Create one new Knowledge Markdown file and its HTML copy?\n\nTitle: ${input.title}\nDestination: ${plan.path}\nHTML copy: ${plan.htmlPath}\nSize: ${Buffer.byteLength(plan.content, "utf8")} bytes Markdown, ${Buffer.byteLength(plan.htmlContent, "utf8")} bytes HTML\n\nExisting files will not be changed.`,
         requestedSchema: {
           type: "object",
           properties: { save: { type: "boolean", title: "Save this article", default: false } },
@@ -57,7 +57,7 @@ server.registerTool("saveKnowledge", {
     if (currentWorkspace.path !== plan.workspace.path) throw new Error("Workspace changed while awaiting approval.");
     extra.signal.throwIfAborted();
     const saved = createArticle(plan);
-    return { content: [{ type: "text", text: `Saved new Knowledge article: ${saved.path}\n${saved.uri}` }] };
+    return { content: [{ type: "text", text: `Saved new Knowledge article: ${saved.path}\n${saved.uri}\nHTML copy: ${saved.htmlPath}\n${saved.htmlUri}` }] };
   } catch (error) {
     return { isError: true, content: [{ type: "text", text: `Knowledge save failed: ${error.message}. Do not retry automatically or use general writing tools. If a write began before an I/O error, a partial new file may remain; existing files were not overwritten.` }] };
   }
