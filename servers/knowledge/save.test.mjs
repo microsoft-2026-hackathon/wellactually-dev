@@ -13,7 +13,7 @@ import { tmpdir } from "node:os";
 import { join, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import test from "node:test";
-import { createArticle, planArticle } from "./save.mjs";
+import { assertSeparateWorkspace, createArticle, planArticle } from "./save.mjs";
 
 function fixture(context) {
   const root = mkdtempSync(join(tmpdir(), "knowledge-save-"));
@@ -70,4 +70,14 @@ test("rejects symlink or junction directories before and after planning", (conte
   symlinkSync(outside, join(workspace, ".wellactually", "knowledge"), process.platform === "win32" ? "junction" : "dir");
   assert.throws(() => planArticle(article, roots), /links/);
   assert.throws(() => createArticle(plan), /links/);
+});
+
+test("rejects the plugin installation as the article workspace", (context) => {
+  const { root, workspace } = fixture(context);
+  const plugin = join(root, "plugin");
+  mkdirSync(plugin);
+  assert.doesNotThrow(() => assertSeparateWorkspace(workspace, plugin));
+  assert.throws(() => assertSeparateWorkspace(plugin, plugin), /plugin installation/);
+  assert.throws(() => assertSeparateWorkspace(join(plugin, "nested"), plugin));
+  assert.throws(() => assertSeparateWorkspace(root, plugin));
 });

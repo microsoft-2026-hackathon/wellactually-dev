@@ -1,43 +1,59 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { dirname, resolve } from "node:path";
 import { z } from "zod/v4";
-import { createArticle, planArticle, selectWorkspace } from "./save.mjs";
+import { assertSeparateWorkspace, createArticle, planArticle, selectWorkspace } from "./save.mjs";
 
 const server = new McpServer({ name: "wellactually-knowledge", version: "0.1.0" });
+const pluginRoot = process.env.PLUGIN_ROOT ??
+  (process.argv[1] ? resolve(dirname(process.argv[1]), "../..") : undefined);
+
+function supportsFormElicitation(capabilities) {
+  const elicitation = capabilities?.elicitation;
+  if (!elicitation) return false;
+  return Object.keys(elicitation).length === 0 || elicitation.form !== undefined;
+}
 
 server.registerTool("saveKnowledge", {
   title: "Save Knowledge Article",
-  description: "Save a requested engineering article as NEW Markdown under a client workspace's .wellactually/knowledge directory. Requires host roots and an explicit human confirmation through MCP form elicitation on every call. Never edits or overwrites files. No shell, model calls, or network access. Supply the finished article body without frontmatter. Do not retry after denial.",
+  description: "Save an explicitly requested engineering article as NEW Markdown under the current session workspace's .wellactually/knowledge directory. Supply the exact workspace file URI from get_current_session. Host roots are enforced when available, and MCP form confirmation is requested when supported. Never edits or overwrites files. No shell, model calls, or network access. Supply the finished article body without frontmatter. Do not retry after denial.",
   inputSchema: z.object({
     title: z.string().min(1).max(200),
     markdown: z.string().min(1).max(200_000),
     tags: z.array(z.string().regex(/^[a-z0-9][a-z0-9-]{0,39}$/)).max(10).default([]),
-    workspaceUri: z.string().optional().describe("Exact file URI of the task workspace from host context; must match a client root. Required when more than one root exists. Never use the plugin directory."),
+    workspaceUri: z.string().describe("Exact file URI of the task workspace returned by get_current_session. It must match a client root when roots are supported. Never invent a path or use the plugin directory."),
   }).strict(),
   annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
 }, async (input, extra) => {
   try {
     const capabilities = server.server.getClientCapabilities();
-    if (!capabilities?.roots || !capabilities?.elicitation?.form) {
-      throw new Error("Saving requires client workspace roots and form elicitation for human approval. No file was created; do not fall back to general writing tools.");
-    }
     const options = { signal: extra.signal, relatedRequestId: extra.requestId };
-    const { roots } = await server.server.listRoots({}, options);
+    const hasRoots = capabilities?.roots !== undefined;
+    const roots = hasRoots
+      ? (await server.server.listRoots({}, options)).roots
+      : [{ uri: input.workspaceUri }];
     const plan = planArticle(input, roots);
-    const confirmation = await server.server.elicitInput({
-      mode: "form",
-      message: `Create one new Knowledge Markdown file?\n\nTitle: ${input.title}\nDestination: ${plan.path}\nSize: ${Buffer.byteLength(plan.content, "utf8")} bytes\n\nExisting files will not be changed.`,
-      requestedSchema: {
-        type: "object",
-        properties: { save: { type: "boolean", title: "Save this article", default: false } },
-        required: ["save"],
-      },
-    }, { ...options, timeout: 300_000 });
-    if (confirmation.action !== "accept" || confirmation.content?.save !== true) {
-      return { content: [{ type: "text", text: "Save declined or cancelled. No file was created. Do not retry without a new user request." }] };
+    assertSeparateWorkspace(plan.workspace.path, pluginRoot);
+
+    if (supportsFormElicitation(capabilities)) {
+      const confirmation = await server.server.elicitInput({
+        mode: "form",
+        message: `Create one new Knowledge Markdown file?\n\nTitle: ${input.title}\nDestination: ${plan.path}\nSize: ${Buffer.byteLength(plan.content, "utf8")} bytes\n\nExisting files will not be changed.`,
+        requestedSchema: {
+          type: "object",
+          properties: { save: { type: "boolean", title: "Save this article", default: false } },
+          required: ["save"],
+        },
+      }, { ...options, timeout: 300_000 });
+      if (confirmation.action !== "accept" || confirmation.content?.save !== true) {
+        return { content: [{ type: "text", text: "Save declined or cancelled. No file was created. Do not retry without a new user request." }] };
+      }
     }
-    const currentRoots = await server.server.listRoots({}, options);
-    const currentWorkspace = selectWorkspace(currentRoots.roots, plan.workspace.uri);
+
+    const currentRoots = hasRoots
+      ? (await server.server.listRoots({}, options)).roots
+      : [{ uri: input.workspaceUri }];
+    const currentWorkspace = selectWorkspace(currentRoots, plan.workspace.uri);
     if (currentWorkspace.path !== plan.workspace.path) throw new Error("Workspace changed while awaiting approval.");
     extra.signal.throwIfAborted();
     const saved = createArticle(plan);

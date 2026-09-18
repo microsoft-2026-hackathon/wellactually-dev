@@ -112,11 +112,13 @@ Pair는 연결된 Driver 세션의 사용자 지시, 응답과 도구 활동을 
 > 이번 작업에서 배운 내용을 공학 문서로 저장해 줘.
 
 `knowledge-compile` Skill은 현재 대화와, 관련된 경우 이미 연결된 Driver 맥락을
-바탕으로 독립적으로 읽을 수 있는 글을 작성합니다. 번들된 `saveKnowledge` 도구가
-저장 위치를 확인하면 **Save this article**을 선택합니다. 작업 Workspace 아래
-`.wellactually/knowledge/`에 새 Markdown 파일이 생성되고 링크가 반환됩니다.
-거절하거나 취소하면 파일을 만들지 않습니다. 대화 원문을 다시 입력하거나 별도
-인터뷰·Compiler Agent를 실행할 필요가 없습니다.
+바탕으로 독립적으로 읽을 수 있는 글을 작성합니다. 번들된 `saveKnowledge` 도구는
+현재 세션의 정확한 Workspace 아래 `.wellactually/knowledge/`에 새 Markdown 파일을
+만들고 링크를 반환합니다. MCP host가 양식 확인을 지원하면 저장 위치를 확인한 뒤
+**Save this article**을 선택합니다. 거절하거나 취소하면 파일을 만들지 않습니다.
+Agent Host에서는 중첩된 양식 확인을 지원하지 않으므로 사용자의 명시적인 지식 정리
+요청 한 번이 새 파일 한 개의 저장 승인으로 사용됩니다. 대화 원문을 다시 입력하거나
+별도 인터뷰·Compiler Agent를 실행할 필요가 없습니다.
 
 문서는 실제 문제와 선택, 감수한 비용, 동작 원리와 확인된 결과를 설명합니다.
 누락된 대화와 검증하지 않은 결과는 그대로 명시하며, 전체 대화 내보내기나 사용자의
@@ -127,12 +129,13 @@ Pair는 연결된 Driver 세션의 사용자 지시, 응답과 도구 활동을 
 권한은 추가되지 않으며 Driver 권한도 바뀌지 않습니다. 런타임과 의존성 고지는
 플러그인에 포함되므로 사용자가 `npm install`을 실행할 필요가 없습니다.
 
-서버는 클라이언트가 제공한 Workspace root만 사용하고, 모델이 임의로 지정한 경로나
-플러그인 설치 폴더를 대체 경로로 사용하지 않습니다. UTC 날짜와 YAML
-title/date/tags를 포함한 `YYYY-MM-DD-ascii-slug-uuid.md` 파일을 만들며, 연결된
-대상 디렉터리를 거부하고 기존 파일을 덮어쓰지 않습니다. 도구 호출이 자동 승인되어도
-저장할 때마다 새 확인이 필요합니다. root·도구·확인 기능을 사용할 수 없으면 저장을
-중단하며 일반 쓰기 권한으로 우회하지 않습니다.
+서버는 `get_current_session`이 반환한 정확한 Workspace file URI를 요구합니다.
+MCP host가 root를 제공하면 URI가 그 목록과 일치하는지 검증합니다. Agent Host처럼
+root를 제공하지 않는 환경에서는 기존 실제 디렉터리인지 확인하고 플러그인 설치
+경로와의 중첩을 거부합니다. 이 fallback의 Workspace 결합은 host가 증명하는 보안
+경계가 아니라 Pair 정책에 의존합니다. UTC 날짜와 YAML title/date/tags를 포함한
+`YYYY-MM-DD-ascii-slug-uuid.md` 파일을 만들며, 연결된 대상 디렉터리를 거부하고
+기존 파일을 덮어쓰지 않습니다. 일반 쓰기 권한으로 우회하지 않습니다.
 
 이 기능은 제한된 로컬 파일 작성기이지 악의적인 로컬 프로세스의 동시 디렉터리
 교체를 막는 OS Sandbox나 결정론적 Secret Scanner가 아닙니다. 신뢰할 수 없는
@@ -152,7 +155,7 @@ MCP 설정을 찾지만 `${PLUGIN_ROOT}`를 Node에 문자 그대로 전달해 �
 Agent Plugins를 지원하는 최신 VS Code, GitHub Copilot 사용 권한, Copilot Agent Host의
 세션 관리 기능이 필요합니다. 조직 정책에 따라 플러그인이나 도구 사용이 제한될 수 있습니다.
 Knowledge 저장에는 MCP 호스트의 `PATH`에서 실행할 수 있는 Node.js 22 이상, 번들
-stdio MCP 지원, 클라이언트 Workspace root와 양식 확인 기능이 추가로 필요합니다.
+stdio MCP 지원과 현재 세션 Workspace 조회 기능이 추가로 필요합니다.
 
 처음 설치할 때는 Command Palette에서 `Chat: Install Plugin From Source`를 실행하고
 다음 URL을 입력합니다. 별도 clone이나 조직의 저장소 읽기 권한 요청은 필요하지 않습니다.

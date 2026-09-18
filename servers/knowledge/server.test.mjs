@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import test from "node:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -9,13 +9,22 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { ElicitRequestSchema, ListRootsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 
 const entry = process.env.KNOWLEDGE_SERVER ?? fileURLToPath(new URL("../../dist/knowledge/server.cjs", import.meta.url));
-const article = { title: "A bounded decision", markdown: "# A bounded decision\n\nTests were not run.", tags: ["design"] };
+const article = {
+  title: "A bounded decision",
+  markdown: "# A bounded decision\n\nTests were not run.",
+  tags: ["design"],
+};
 
 async function fixture(context, capabilities = { roots: {}, elicitation: { form: {} } }) {
   const root = mkdtempSync(join(tmpdir(), "knowledge-mcp-"));
   const workspace = join(root, "workspace");
   mkdirSync(workspace);
-  const state = { roots: [{ uri: pathToFileURL(workspace).href }], confirmations: [], result: { action: "accept", content: { save: true } } };
+  const input = { ...article, workspaceUri: pathToFileURL(workspace).href };
+  const state = {
+    roots: [{ uri: input.workspaceUri }],
+    confirmations: [],
+    result: { action: "accept", content: { save: true } },
+  };
   const client = new Client({ name: "knowledge-test", version: "1.0.0" }, { capabilities });
   context.after(async () => {
     await client.close();
@@ -27,7 +36,17 @@ async function fixture(context, capabilities = { roots: {}, elicitation: { form:
     return typeof state.result === "function" ? state.result() : state.result;
   });
   await client.connect(new StdioClientTransport({ command: process.execPath, args: [resolve(entry)], cwd: root, stderr: "pipe" }));
-  return { client, state, workspace, root, call: (input = article) => client.callTool({ name: "saveKnowledge", arguments: input }) };
+  return {
+    client,
+    state,
+    workspace,
+    root,
+    input,
+    call: (arguments_ = input) => client.callTool({
+      name: "saveKnowledge",
+      arguments: arguments_,
+    }),
+  };
 }
 
 test("MCP exposes only saveKnowledge and confirms each new save under the client root", async (context) => {
@@ -56,24 +75,49 @@ test("decline, cancel, false and malformed acceptance do not write", async (cont
   }
 });
 
-test("unsupported clients fail closed without asking or writing", async (context) => {
-  for (const capabilities of [{}, { roots: {} }, { elicitation: { form: {} } }, { roots: {}, elicitation: { url: {} } }]) {
-    const { call, workspace, state } = await fixture(context, capabilities);
-    assert.equal((await call()).isError, true);
-    assert.equal(state.confirmations.length, 0);
-    assert.equal(existsSync(join(workspace, ".wellactually")), false);
-  }
+test("Agent Host fallback uses the explicit workspace URI without form elicitation", async (context) => {
+  const { call, workspace, state } = await fixture(context, {});
+  const result = await call();
+  assert.notEqual(result.isError, true, JSON.stringify(result));
+  assert.equal(state.confirmations.length, 0);
+  assert.equal(readdirSync(join(workspace, ".wellactually", "knowledge")).length, 1);
 });
 
-test("arbitrary paths, extra parameters and missing or ambiguous roots do not write", async (context) => {
-  const { call, workspace, state } = await fixture(context);
-  for (const input of [{ ...article, workspaceUri: "file:///arbitrary" }, { ...article, path: "/arbitrary.md" }, { ...article, approved: true }]) {
-    assert.equal((await call(input)).isError, true);
-  }
-  const roots = state.roots;
-  for (const candidates of [[], [...roots, ...roots]]) {
-    state.roots = candidates;
-    assert.equal((await call()).isError, true);
+test("Agent Host fallback rejects the plugin installation", async (context) => {
+  const { call, state, input } = await fixture(context, {});
+  const pluginRoot = resolve(dirname(entry), "../..");
+  const result = await call({ ...input, workspaceUri: pathToFileURL(pluginRoot).href });
+  assert.equal(result.isError, true);
+  assert.equal(state.confirmations.length, 0);
+});
+
+test("roots remain enforced when form elicitation is unavailable", async (context) => {
+  const { call, workspace, state, root } = await fixture(context, { roots: {} });
+  assert.notEqual((await call()).isError, true);
+  assert.equal(state.confirmations.length, 0);
+  rmSync(join(workspace, ".wellactually"), { recursive: true });
+  const other = join(root, "other");
+  mkdirSync(other);
+  state.roots = [{ uri: pathToFileURL(other).href }];
+  assert.equal((await call()).isError, true);
+  assert.equal(existsSync(join(workspace, ".wellactually")), false);
+});
+
+test("empty elicitation capability is treated as form support", async (context) => {
+  const { call, state } = await fixture(context, { roots: {}, elicitation: {} });
+  assert.notEqual((await call()).isError, true);
+  assert.equal(state.confirmations.length, 1);
+});
+
+test("arbitrary paths, extra parameters and missing workspace URI do not write", async (context) => {
+  const { call, workspace, state, input } = await fixture(context);
+  for (const invalid of [
+    { ...input, workspaceUri: "file:///arbitrary" },
+    { ...input, path: "/arbitrary.md" },
+    { ...input, approved: true },
+    article,
+  ]) {
+    assert.equal((await call(invalid)).isError, true);
   }
   assert.equal(state.confirmations.length, 0);
   assert.equal(existsSync(join(workspace, ".wellactually")), false);

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { closeSync, constants, fstatSync, lstatSync, mkdirSync, openSync, realpathSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { closeSync, constants, existsSync, fstatSync, lstatSync, mkdirSync, openSync, realpathSync, writeFileSync } from "node:fs";
+import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 function assertDirectory(path) {
@@ -26,6 +26,26 @@ export function selectWorkspace(roots, workspaceUri) {
   const path = fileURLToPath(selected.uri);
   assertDirectory(path);
   return { uri: selected.uri, path: realpathSync(path) };
+}
+
+function containsPath(parent, child) {
+  const difference = relative(parent, child);
+  return difference === "" ||
+    (!isAbsolute(difference) && difference !== ".." && !difference.startsWith(`..${sep}`));
+}
+
+function canonicalPath(path) {
+  if (existsSync(path)) return realpathSync(path);
+  return join(canonicalPath(dirname(path)), basename(path));
+}
+
+export function assertSeparateWorkspace(workspacePath, restrictedPath) {
+  if (!restrictedPath) return;
+  const workspace = canonicalPath(workspacePath);
+  const restricted = canonicalPath(restrictedPath);
+  if (containsPath(restricted, workspace) || containsPath(workspace, restricted)) {
+    throw new Error("Knowledge workspace must be separate from the plugin installation.");
+  }
 }
 
 export function planArticle(input, roots) {

@@ -1,6 +1,6 @@
 import { build } from "esbuild";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -18,14 +18,18 @@ const result = await build({
 });
 const dependencies = new Set();
 for (const input of Object.keys(result.metafile.inputs)) {
-  if (!input.startsWith("node_modules/")) continue;
-  let directory = dirname(join(root, input));
-  while (!existsSync(join(directory, "package.json"))) directory = dirname(directory);
-  while (!JSON.parse(readFileSync(join(directory, "package.json"), "utf8")).name) {
+  const inputPath = resolve(root, input);
+  if (!inputPath.split(sep).includes("node_modules")) continue;
+  let directory = dirname(inputPath);
+  while (directory !== dirname(directory)) {
+    const manifestPath = join(directory, "package.json");
+    if (existsSync(manifestPath)
+        && JSON.parse(readFileSync(manifestPath, "utf8")).name) {
+      dependencies.add(directory);
+      break;
+    }
     directory = dirname(directory);
-    while (!existsSync(join(directory, "package.json"))) directory = dirname(directory);
   }
-  dependencies.add(directory);
 }
 const notices = [...dependencies].sort().map((directory) => {
   const manifest = JSON.parse(readFileSync(join(directory, "package.json"), "utf8"));

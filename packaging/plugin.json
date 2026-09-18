@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "wellactually",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Progressive pair programming with AI for developers building engineering judgment while working with coding agents.",
   "author": {
     "name": "Wellactually"

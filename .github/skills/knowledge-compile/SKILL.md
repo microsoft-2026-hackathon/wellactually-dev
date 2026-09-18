@@ -49,18 +49,21 @@ JSON review, transcript paste, or clarification interview.
    change settings, or start another model or agent to produce the article.
 3. Call only `wellactually-knowledge/saveKnowledge` to persist it. Supply `title`,
    the finished `markdown` body without frontmatter, and a short lowercase ASCII
-   `tags` list. Supply the task workspace's exact file URI as `workspaceUri` when
-   known; it must match a root provided by the host. Never invent a path, approval
-   flag, or output filename. The Skill itself grants no tools.
-4. The tool requests human save confirmation with the destination, then creates
-   one new `.wellactually/knowledge/YYYY-MM-DD-ascii-slug-uuid.md`. It generates
-   YAML title/date/tags, uses a UTC date, and never overwrites a file. Honor that
-   confirmation; do not answer it for the user. No manual tool toggling is needed.
-5. On denial, cancellation, missing tool, unsupported roots/confirmation, or any
-   error, report the specific blocker. Do not retry automatically, claim success,
-   request general edit access, or fall back to commands, another tool, or Driver.
-   A failed I/O write may leave a partial new file; never repair or remove it with
-   general editing tools. Leave existing notes and user edits untouched.
+   `tags` list. Always supply the task workspace's exact file URI from
+   `get_current_session` as `workspaceUri`; it must match a root when the host
+   provides roots. Never invent a path, approval flag, or output filename. The
+   Skill itself grants no tools.
+4. When the host supports form elicitation, the tool requests human confirmation
+   with the destination; honor that response and do not answer it for the user.
+   Agent Host does not currently support that nested confirmation, so the
+   explicit human compilation request authorizes one save there. The tool creates
+   one new `.wellactually/knowledge/YYYY-MM-DD-ascii-slug-uuid.md`, generates YAML
+   title/date/tags, uses a UTC date, and never overwrites a file.
+5. On denial, cancellation, missing tool, or any error, report the specific
+   blocker. Do not retry automatically, claim success, request general edit
+   access, or fall back to commands, another tool, or Driver. A failed I/O write
+   may leave a partial new file; never repair or remove it with general editing
+   tools. Leave existing notes and user edits untouched.
 6. After a successful tool result, return the saved file link and any material
    coverage limitation. Do not paste the whole article into chat. The user may
    read and edit it afterward. Resume ordinary Pair boundaries; the dedicated
