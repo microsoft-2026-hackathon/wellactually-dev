@@ -75,7 +75,7 @@ function renderInline(text) {
   return output;
 }
 
-function renderRow(line) {
+function parseRow(line) {
   return line.replace(/^\|/, "").replace(/\|$/, "").split("|").map((cell) => cell.trim());
 }
 
@@ -122,11 +122,11 @@ function renderBlocks(markdown) {
     }
 
     if (/^\s{0,3}\|.*\|\s*$/.test(line) && /^\s{0,3}\|[\s:|-]+\|\s*$/.test(lines[index + 1] ?? "")) {
-      const head = renderRow(line.trim());
+      const head = parseRow(line.trim());
       index += 2;
       const body = [];
       while (index < lines.length && /^\s{0,3}\|.*\|\s*$/.test(lines[index])) {
-        body.push(renderRow(lines[index++].trim()));
+        body.push(parseRow(lines[index++].trim()));
       }
       const headHtml = head.map((cell) => `<th>${renderInline(cell)}</th>`).join("");
       const bodyHtml = body
@@ -158,6 +158,8 @@ function renderBlocks(markdown) {
     const paragraph = [];
     while (index < lines.length && lines[index].trim()
       && !/^(#{1,6}\s|```|~~~|\s{0,3}>)/.test(lines[index])
+      && !/^\s{0,3}(-{3,}|\*{3,}|_{3,})\s*$/.test(lines[index])
+      && !/^\s{0,3}\|.*\|\s*$/.test(lines[index])
       && !/^\s{0,3}([-*+]|\d{1,9}[.)])\s+/.test(lines[index])) {
       paragraph.push(lines[index++].trim());
     }

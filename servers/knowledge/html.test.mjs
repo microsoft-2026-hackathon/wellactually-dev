@@ -43,6 +43,12 @@ test("renders the documented Markdown subset used by compiled articles", () => {
   assert.match(body, /<hr \/>/);
 });
 
+test("ends a paragraph at a following rule or table", () => {
+  const body = render("Paragraph text\n---\nAfter\n\nLead in\n| Option | Cost |\n| --- | --- |\n| Cache | Staleness |");
+  assert.match(body, /<p>Paragraph text<\/p>\n<hr \/>/);
+  assert.match(body, /<p>Lead in<\/p>\n<table>/);
+});
+
 test("keeps safe links and neutralises unsafe or malformed ones", () => {
   assert.match(render("[docs](https://example.com/a)"), /<a href="https:\/\/example\.com\/a" rel="noopener noreferrer">docs<\/a>/);
   assert.match(render("[local](./notes.md)"), /<a href="\.\/notes\.md"/);

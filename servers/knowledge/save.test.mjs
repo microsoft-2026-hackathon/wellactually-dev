@@ -55,6 +55,20 @@ test("the HTML copy shares the Markdown name, stays in the knowledge directory a
   assert.equal(saved.htmlUri, pathToFileURL(saved.htmlPath).href);
 });
 
+test("a failed HTML write leaves the Markdown file and never overwrites either file", (context) => {
+  const { roots } = fixture(context);
+  const plan = planArticle(article, roots);
+  const saved = createArticle(plan);
+  const markdown = readFileSync(saved.path, "utf8");
+  const second = planArticle(article, roots);
+  second.path = second.path.replace(/\.md$/, "-other.md");
+  second.htmlPath = saved.htmlPath;
+  assert.throws(() => createArticle(second), { code: "EEXIST" });
+  assert.equal(readFileSync(second.path, "utf8"), second.content);
+  assert.equal(readFileSync(saved.path, "utf8"), markdown);
+  assert.equal(readFileSync(saved.htmlPath, "utf8"), plan.htmlContent);
+});
+
 test("the HTML copy escapes untrusted article content and rejects unsafe link targets", (context) => {
   const { roots } = fixture(context);
   const hostile = {

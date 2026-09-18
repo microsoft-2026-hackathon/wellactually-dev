@@ -39,7 +39,9 @@ output isolation, and repeatability.
 The filesystem checks are not protection against a hostile process concurrently
 swapping directories between checks and opening a file. Final creation uses
 exclusive open and no-follow where supported; parents are checked before writing.
-I/O failure may leave a partial new file. Redaction and article quality remain
+I/O failure may leave a partial new file. The Markdown file is created before its
+HTML copy, so a failed second write can leave the Markdown alone; neither write
+replaces an existing file and the tool does not repair or remove the remainder. Redaction and article quality remain
 model behavior, not server-enforced guarantees. Treat host roots and elicitation
 responses as trusted host input. When Agent Host supplies neither capability,
 the exact `get_current_session` Workspace URI and explicit user request are
