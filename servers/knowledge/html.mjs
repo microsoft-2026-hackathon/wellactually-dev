@@ -100,6 +100,8 @@ function renderBlocks(markdown) {
 
     const heading = line.match(/^(#{1,6})\s+(.*)$/);
     if (heading) {
+      // The page <h1> is the article title, so body headings shift down one
+      // level; the deepest two Markdown levels both land on <h6>.
       const level = Math.min(heading[1].length + 1, 6);
       blocks.push(`<h${level}>${renderInline(heading[2].trim())}</h${level}>`);
       index += 1;
@@ -199,7 +201,7 @@ ${STYLE}
         <p class="meta"><time datetime="${escapeText(date)}">${escapeText(date)}</time>${tagList}</p>
       </header>
 ${body}
-      <footer>Generated from the Markdown article by Wellactually Knowledge. Edit the Markdown file and save again to produce an updated copy.</footer>
+      <footer>Generated from the Markdown article by Wellactually Knowledge. Saving again creates a new Markdown and HTML pair; this copy is never regenerated.</footer>
     </main>
   </body>
 </html>

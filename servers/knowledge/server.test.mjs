@@ -59,8 +59,9 @@ test("MCP exposes only saveKnowledge and confirms each new save under the client
     assert.match(result.content[0].text, /HTML copy: .*\.html/);
   }
   const directory = join(workspace, ".wellactually", "knowledge");
-  const markdownFiles = readdirSync(directory).filter((name) => name.endsWith(".md"));
-  const htmlFiles = readdirSync(directory).filter((name) => name.endsWith(".html"));
+  const entries = readdirSync(directory);
+  const markdownFiles = entries.filter((name) => name.endsWith(".md"));
+  const htmlFiles = entries.filter((name) => name.endsWith(".html"));
   assert.equal(markdownFiles.length, 2);
   assert.deepEqual(htmlFiles.sort(), markdownFiles.map((name) => name.replace(/\.md$/, ".html")).sort());
   assert.equal(state.confirmations.length, 2);
