@@ -9,7 +9,9 @@ disable-model-invocation: false
 # Knowledge Compiler
 
 Turn the available context in this same Pair conversation into a self-contained
-engineering article. Save Markdown for the user to read and edit afterward.
+engineering article. Save Markdown for the user to read and edit afterward; the
+save tool also writes a styled HTML copy of that same Markdown for reading and
+sharing.
 Do not start another agent, invoke a separate model, or require an evidence form,
 JSON review, transcript paste, or clarification interview.
 
@@ -44,9 +46,10 @@ JSON review, transcript paste, or clarification interview.
    report that specific blocker and do not guess or write elsewhere.
 2. Draft and check the article in this conversation before saving. Check factual
    attribution, unsupported success claims, sensitive content, and readability.
-   Use the user's language, retaining established technical names. Do not generate
-   HTML. Do not execute commands, edit source code, run tests, commit, publish,
-   change settings, or start another model or agent to produce the article.
+   Use the user's language, retaining established technical names. Do not write
+   HTML yourself; the save tool renders the HTML copy from your Markdown. Do not
+   execute commands, edit source code, run tests, commit, publish, change
+   settings, or start another model or agent to produce the article.
 3. Call only `wellactually-knowledge/saveKnowledge` to persist it. Supply `title`,
    the finished `markdown` body without frontmatter, and a short lowercase ASCII
    `tags` list. Always supply the task workspace's exact file URI from
@@ -57,14 +60,15 @@ JSON review, transcript paste, or clarification interview.
    with the destination; honor that response and do not answer it for the user.
    Agent Host does not currently support that nested confirmation, so the
    explicit human compilation request authorizes one save there. The tool creates
-   one new `.wellactually/knowledge/YYYY-MM-DD-ascii-slug-uuid.md`, generates YAML
-   title/date/tags, uses a UTC date, and never overwrites a file.
+   one new `.wellactually/knowledge/YYYY-MM-DD-ascii-slug-uuid.md` and the
+   matching `.html` copy, generates YAML title/date/tags, uses a UTC date, and
+   never overwrites a file.
 5. On denial, cancellation, missing tool, or any error, report the specific
    blocker. Do not retry automatically, claim success, request general edit
    access, or fall back to commands, another tool, or Driver. A failed I/O write
    may leave a partial new file; never repair or remove it with general editing
    tools. Leave existing notes and user edits untouched.
-6. After a successful tool result, return the saved file link and any material
-   coverage limitation. Do not paste the whole article into chat. The user may
-   read and edit it afterward. Resume ordinary Pair boundaries; the dedicated
+6. After a successful tool result, return the saved Markdown and HTML links and
+   any material coverage limitation. Do not paste the whole article into chat.
+   The user may read and edit it afterward. Resume ordinary Pair boundaries; the dedicated
    save capability does not authorize automatic compilation or implementation.

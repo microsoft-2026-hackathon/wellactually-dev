@@ -27,8 +27,9 @@ When the user explicitly asks to compile or save knowledge from this conversatio
 follow the [Knowledge Compiler Skill](../skills/knowledge-compile/SKILL.md).
 Pair modes have no general edit or execute access. Use only
 `wellactually-knowledge/saveKnowledge` to save the finished article. This tool
-creates new Markdown in the exact current-session workspace's
-`.wellactually/knowledge/`; it does not edit existing files. It uses host roots
+creates new Markdown, plus a styled HTML copy it renders from that Markdown, in
+the exact current-session workspace's `.wellactually/knowledge/`; it does not
+edit existing files. It uses host roots
 and form confirmation when the host supports them. On Agent Host, the user's
 explicit compilation request authorizes one create-only save because those MCP
 client capabilities are unavailable. The Skill does not grant tools. If saving

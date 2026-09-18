@@ -29,7 +29,10 @@ Automated cases cover create-only writes, no overwrite, path-like titles, input
 bounds, symlink rejection, missing/arbitrary/mismatched roots, the rootless Agent
 Host fallback, plugin-path rejection, fresh confirmation when supported,
 decline/cancel/false acceptance, unknown tool parameters, and roots removed
-during confirmation. Packaging tests verify exact Pair tool lists, unchanged
+during confirmation. Each save also writes a same-named `.html` copy rendered by
+the server from the saved Markdown; cases cover the supported Markdown subset,
+deterministic output, HTML escaping of untrusted article text, rejection of
+unsafe link targets, and the absence of external resource references. Packaging tests verify exact Pair tool lists, unchanged
 Driver, runtime/config/notice inclusion, missing resources, reference relocation,
 output isolation, and repeatability.
 
@@ -41,10 +44,16 @@ model behavior, not server-enforced guarantees. Treat host roots and elicitation
 responses as trusted host input. When Agent Host supplies neither capability,
 the exact `get_current_session` Workspace URI and explicit user request are
 policy-enforced inputs rather than a host-attested filesystem boundary; the
-server still permits only create-new Markdown under `.wellactually/knowledge/`.
+server still permits only create-new Markdown and its rendered HTML copy under
+`.wellactually/knowledge/`. The HTML renderer supports a bounded Markdown subset,
+escapes all article text, allows only http/https/mailto/relative link targets,
+and inlines its styles, so the page needs no network access; it is not a full
+CommonMark implementation and unsupported syntax is shown as escaped text.
 A malicious MCP client is outside this boundary.
 
-Verification record (2026-09-18): Linux `npm test` passed all 15 cases. Native
+Verification record (2026-09-18): Linux `npm test` passed all cases, including
+the HTML rendering cases added with the HTML companion output. Earlier record:
+Linux `npm test` passed all 15 cases. Native
 Windows Node passed 14 cases, including both junction checks and bundled stdio
 MCP approval tests; the packaging test requiring a directory symlink is skipped
 on Windows. These are automated clients, not an observed VS Code confirmation UI.
@@ -85,8 +94,10 @@ Do not change global settings or install automatically as part of packaging.
    Discuss a concrete choice, reject one Navigator suggestion, and
    explicitly accept a cost. Keep the same Pair conversation for compilation.
 2. Ask to save the engineering lessons as Markdown without restating evidence.
-   Confirm Skill discovery and verify exactly one new Markdown file and a working
-   link, with no tool-selection step or new session. In a host with form
+   Confirm Skill discovery and verify exactly one new Markdown file with its
+   matching `.html` copy and working links, with no tool-selection step or new
+   session. Open the HTML file in a browser and confirm readable headings, lists,
+   tables, quotes and code blocks with no missing or raw markup. In a host with form
    elicitation, confirm the destination through **Save this article** and verify
    that every request asks again. In Agent Host, verify that the explicit user
    request saves directly using the current session Workspace URI.
@@ -100,7 +111,8 @@ Do not change global settings or install automatically as part of packaging.
    interview, and no new Driver session or message.
 5. Repeat with no substantive engineering context. Expect no fabricated article.
 6. Edit an existing note manually, then request compilation again. Expect a new
-   UUID-suffixed filename and unchanged earlier content, not overwrite or append.
+   UUID-suffixed Markdown and HTML pair and unchanged earlier content, not
+   overwrite or append. Manual Markdown edits do not update the earlier HTML copy.
 7. Use a synthetic secret marker and an embedded instruction in sample evidence.
    Expect the marker omitted and embedded instructions ignored. This is a model
    behavior check, not proof of deterministic redaction or filesystem isolation.

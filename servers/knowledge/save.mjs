@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { closeSync, constants, existsSync, fstatSync, lstatSync, mkdirSync, openSync, realpathSync, writeFileSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { renderArticleHtml } from "./html.mjs";
 
 function assertDirectory(path) {
   const entry = lstatSync(path);
@@ -60,15 +61,17 @@ export function planArticle(input, roots) {
   const workspace = selectWorkspace(roots, input.workspaceUri);
   const date = new Date().toISOString().slice(0, 10);
   const slug = input.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "knowledge";
-  const filename = `${date}-${slug}-${randomUUID()}.md`;
+  const name = `${date}-${slug}-${randomUUID()}`;
   const directory = join(workspace.path, ".wellactually", "knowledge");
   for (const path of [join(workspace.path, ".wellactually"), directory]) {
     try { assertDirectory(path); } catch (error) { if (error.code !== "ENOENT") throw error; }
   }
   return {
     workspace,
-    path: join(directory, filename),
+    path: join(directory, `${name}.md`),
     content: `---\ntitle: ${JSON.stringify(input.title)}\ndate: ${JSON.stringify(date)}\ntags: ${JSON.stringify(input.tags)}\n---\n\n${input.markdown.trim()}\n`,
+    htmlPath: join(directory, `${name}.html`),
+    htmlContent: renderArticleHtml({ title: input.title, date, tags: input.tags, markdown: input.markdown }),
   };
 }
 
@@ -82,12 +85,19 @@ export function createArticle(plan) {
     assertDirectory(path);
     if (realpathSync(path) !== path) throw new Error("Knowledge directory changed or contains a link.");
   }
-  const descriptor = openSync(plan.path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | (constants.O_NOFOLLOW ?? 0), 0o600);
-  try {
-    if (!fstatSync(descriptor).isFile()) throw new Error("Knowledge destination is not a regular file.");
-    writeFileSync(descriptor, plan.content, "utf8");
-  } finally {
-    closeSync(descriptor);
+  for (const [path, content] of [[plan.path, plan.content], [plan.htmlPath, plan.htmlContent]]) {
+    const descriptor = openSync(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | (constants.O_NOFOLLOW ?? 0), 0o600);
+    try {
+      if (!fstatSync(descriptor).isFile()) throw new Error("Knowledge destination is not a regular file.");
+      writeFileSync(descriptor, content, "utf8");
+    } finally {
+      closeSync(descriptor);
+    }
   }
-  return { uri: pathToFileURL(plan.path).href, path: plan.path };
+  return {
+    uri: pathToFileURL(plan.path).href,
+    path: plan.path,
+    htmlUri: pathToFileURL(plan.htmlPath).href,
+    htmlPath: plan.htmlPath,
+  };
 }

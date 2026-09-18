@@ -56,14 +56,22 @@ test("MCP exposes only saveKnowledge and confirms each new save under the client
     const result = await call();
     assert.notEqual(result.isError, true, JSON.stringify(result));
     assert.match(result.content[0].text, /Saved new Knowledge article/);
+    assert.match(result.content[0].text, /HTML copy: .*\.html/);
   }
   const directory = join(workspace, ".wellactually", "knowledge");
-  assert.equal(readdirSync(directory).length, 2);
+  const markdownFiles = readdirSync(directory).filter((name) => name.endsWith(".md"));
+  const htmlFiles = readdirSync(directory).filter((name) => name.endsWith(".html"));
+  assert.equal(markdownFiles.length, 2);
+  assert.deepEqual(htmlFiles.sort(), markdownFiles.map((name) => name.replace(/\.md$/, ".html")).sort());
   assert.equal(state.confirmations.length, 2);
   assert.equal(state.confirmations[0].requestedSchema.properties.save.default, false);
   assert.match(state.confirmations[0].message, /Destination:/);
+  assert.match(state.confirmations[0].message, /HTML copy:/);
   assert.equal(existsSync(join(root, ".wellactually")), false);
-  assert.match(readFileSync(join(directory, readdirSync(directory)[0]), "utf8"), /Tests were not run/);
+  assert.match(readFileSync(join(directory, markdownFiles[0]), "utf8"), /Tests were not run/);
+  const html = readFileSync(join(directory, htmlFiles[0]), "utf8");
+  assert.match(html, /^<!doctype html>/);
+  assert.match(html, /Tests were not run/);
 });
 
 test("decline, cancel, false and malformed acceptance do not write", async (context) => {
@@ -80,7 +88,7 @@ test("Agent Host fallback uses the explicit workspace URI without form elicitati
   const result = await call();
   assert.notEqual(result.isError, true, JSON.stringify(result));
   assert.equal(state.confirmations.length, 0);
-  assert.equal(readdirSync(join(workspace, ".wellactually", "knowledge")).length, 1);
+  assert.deepEqual(readdirSync(join(workspace, ".wellactually", "knowledge")).map((name) => name.slice(name.lastIndexOf("."))).sort(), [".html", ".md"]);
 });
 
 test("Agent Host fallback rejects the plugin installation", async (context) => {
